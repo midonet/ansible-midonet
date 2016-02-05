@@ -1,0 +1,9 @@
+[local]
+localhost ansible_connection=local
+[allinone]
+[controller]
+localhost ansible_connection=local
+[nsdb]
+localhost ansible_connection=local
+[compute]
+localhost ansible_connection=local

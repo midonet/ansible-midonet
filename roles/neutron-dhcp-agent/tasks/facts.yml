@@ -1,0 +1,5 @@
+---
+
+- name: Set service facts
+  set_fact: neutron_dhcp_agent_service="neutron-dhcp-agent"
+

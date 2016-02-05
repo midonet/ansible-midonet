@@ -1,0 +1,18 @@
+---
+
+- name: Clean neutron server first
+  yum: name="{{ item }}" state=absent
+  with_items:
+      - openstack-neutron
+      - openstack-neutron-ml2
+
+
+- name: Install neutron server and client
+  yum: name="{{ item }}" state=present
+  with_items:
+    - openstack-neutron
+    - python-neutronclient
+    - openstack-neutron-ml2
+
+- name: Default ML2 Plugin symlink
+  file: src=/etc/neutron/plugins/ml2/ml2_conf.ini dest=/etc/neutron/plugin.ini state=link

@@ -1,0 +1,34 @@
+---
+
+- name: Install curl
+  apt: name=curl state=present
+
+- name: Get datastax repo_key
+  apt_key: url=http://debian.datastax.com/debian/repo_key state=present
+  retries: 3
+
+- name: Add datastax repo
+  shell: apt-add-repository 'deb http://debian.datastax.com/community stable main'
+
+- name: Install openjdk 7
+  apt: name=openjdk-7-jre-headless state=present
+
+- name: Remove openjdk 6
+  apt: name=openjdk-6-jre-headless state=absent
+
+# Supported Cassandra 2.0.10 only
+- name: Install cassandra
+  apt: name=cassandra=2.0.10 state=present update_cache=yes
+
+- name: Force stop cassandra
+  service: name=cassandra state=stopped
+
+- name: List cassandra data
+  shell: ls -1 /var/lib/cassandra/
+  register: cassandra_files
+
+- name: Clear cassandra data
+  file: path=/var/lib/cassandra/{{ item }} state=absent
+  with_items: cassandra_files.stdout_lines
+  notify:
+    - Restart cassandra

@@ -1,0 +1,24 @@
+---
+
+- name: Add apt proxy
+  template: src=02proxy.j2 dest=/etc/apt/apt.conf.d/02proxy
+  when:
+  - http_proxy is defined and http_proxy != ""
+
+- name: No apt proxy
+  file: path=/etc/apt/apt.conf.d/02proxy state=absent
+  when:
+  - http_proxy is not defined
+
+- name: Add ppa for openjdk 8
+  shell: apt-add-repository -y ppa:openjdk-r/ppa
+
+- name: Add openstack APT repo
+  shell: "echo 'deb http://ubuntu-cloud.archive.canonical.com/ubuntu trusty-updates/{{openstack_version}} main' > /etc/apt/sources.list.d/ubuntu-cloud-archive-{{openstack_version}}-trusty.list"
+
+- name: Add openstack cloud ring
+  apt: name=ubuntu-cloud-keyring state=present
+
+- name: Update APT cache
+  apt: update_cache=yes
+  retries: 2

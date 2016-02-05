@@ -1,0 +1,70 @@
+---
+- name: Delete controller node
+  nova_compute:
+     state: absent
+     auth_url: "{{ os_auth_url }}"
+     login_username: "{{ os_login_username }}"
+     login_password: "{{ os_login_password }}"
+     login_tenant_name: "{{ os_login_tenant }}"
+     name: "{{ deployment_name }}-controller"
+     image_id: "{{ os_image_id }}"
+     key_name: "{{ os_key_name }}"
+     wait_for: 500
+     flavor_id: 7 # TODO: get proper flavor
+     nics:
+       - net-id: "{{ os_net_id }}"
+  register: controller
+
+- name: Delete NSDB nodes
+  nova_compute:
+     state: absent
+     auth_url: "{{ os_auth_url }}"
+     login_username: "{{ os_login_username }}"
+     login_password: "{{ os_login_password }}"
+     login_tenant_name: "{{ os_login_tenant }}"
+     name: "{{ deployment_name }}-nsdb-{{ item }}"
+     image_id: "{{ os_image_id }}"
+     key_name: "{{ os_key_name }}"
+     wait_for: 500
+     flavor_id: 10 # TODO: get proper flavor
+     nics:
+       - net-id: "{{ os_net_id }}"
+  register: nsdb
+  with_sequence: count={{ num_nsdb_nodes }}
+  tags: nsdb
+
+- name: Delete Compute nodes
+  nova_compute:
+     state: absent
+     auth_url: "{{ os_auth_url }}"
+     login_username: "{{ os_login_username }}"
+     login_password: "{{ os_login_password }}"
+     login_tenant_name: "{{ os_login_tenant }}"
+     name: "{{ deployment_name }}-comp-{{ item }}"
+     image_id: "{{ os_image_id }}"
+     key_name: "{{ os_key_name }}"
+     wait_for: 500
+     flavor_id: 7 # TODO: get proper flavor
+     nics:
+       - net-id: "{{ os_net_id }}"
+  register: compute
+  with_sequence: count={{ num_comp_nodes }}
+  tags: cp
+
+- name: Delete Edge nodes
+  nova_compute:
+     state: absent
+     auth_url: "{{ os_auth_url }}"
+     login_username: "{{ os_login_username }}"
+     login_password: "{{ os_login_password }}"
+     login_tenant_name: "{{ os_login_tenant }}"
+     name: "{{ deployment_name }}-edge-{{ item.0 }}"
+     image_id: "{{ os_image_id }}"
+     key_name: "{{ os_key_name }}"
+     wait_for: 500
+     flavor_id: 10 # TODO: get proper flavor
+     nics:
+       - net-id: "{{ os_net_id }}"
+       - net-id: "{{ item.1 }}"
+  register: edge
+  with_indexed_items: "{{ os_edges_net_id }}"

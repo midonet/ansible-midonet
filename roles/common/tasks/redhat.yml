@@ -1,0 +1,58 @@
+---
+
+- name: Add yum proxy
+  lineinfile: insertafter="EOF" line="proxy=http://{{ http_proxy }}" dest=/etc/yum.conf
+  when:
+    - http_proxy is defined and http_proxy != ""
+
+- name: No yum proxy
+  lineinfile: state=absent regexp="^proxy=.*" dest=/etc/yum.conf
+  when:
+    - http_proxy is not defined
+
+- name: Register to RHN
+  command: /usr/sbin/subscription-manager register --username={{ rhel_user }} --password={{ rhel_password }} --auto-attach --force
+  when: ansible_distribution == 'RedHat'
+
+- name: Install yum-utils
+  yum: name=yum-utils state=present
+
+- name: Enable extra RHEL repos
+  command: yum-config-manager --enable {{ item }}
+  when: ansible_distribution == 'RedHat'
+  with_items:
+    - rhel-{{ ansible_distribution_major_version }}-server-optional-rpms
+    - rhel-{{ ansible_distribution_major_version }}-server-extras-rpms
+
+- name: Enable RHOS repos
+  command: yum-config-manager --enable rhel-{{ ansible_distribution_major_version }}-server-openstack-5.0-rpms
+  when: ansible_distribution == 'RedHat' and openstack_version == 'icehouse'
+
+- name: Enable RHOS repos
+  command: yum-config-manager --enable rhel-{{ ansible_distribution_major_version }}-server-openstack-6.0-rpms
+  when: ansible_distribution == 'RedHat' and openstack_version == 'juno'
+
+- name: Add EPEL7 repository
+  yum: name=epel-release state=present
+  when: ansible_distribution_major_version == '7'
+
+- name: Add EPEL6 repository
+  yum: name=http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm state=present
+  when: ansible_distribution == 'CentOS' and ansible_distribution_major_version == '6'
+
+- name: Add RDO repos
+  template: src=rdo.repo.j2 dest=/etc/yum.repos.d/rdo.repo
+  when: openstack_version == 'kilo' or ansible_distribution == 'CentOS'
+
+- name: Disable SELinux service
+  selinux: state=disabled
+
+- name: Get current SELinux mode
+  shell: getenforce
+  register: selinux_mode
+
+- name: Set permissive mode
+  command: setenforce 0
+  when: selinux_mode.stdout == "Enforcing"
+
+

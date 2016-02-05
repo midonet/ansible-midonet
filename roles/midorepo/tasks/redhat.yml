@@ -1,0 +1,4 @@
+---
+
+- name: Add Midokura repos
+  template: src=midonet.repo.j2 dest=/etc/yum.repos.d/midonet.repo

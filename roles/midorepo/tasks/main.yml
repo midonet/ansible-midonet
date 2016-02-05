@@ -1,0 +1,19 @@
+---
+
+- name: Set repo suffix
+  set_fact:
+    deb_repo_suffix: '-deb'
+    rpm_repo_suffix: '-rpm'
+  when: "'artifactory' in repo_url_base"
+
+- name: Set repo suffix
+  set_fact:
+    deb_repo_suffix: ''
+    rpm_repo_suffix: ''
+  when: "'artifactory' not in repo_url_base"
+
+- include: redhat.yml
+  when: ansible_os_family == 'RedHat'
+
+- include: debian.yml
+  when: ansible_os_family == 'Debian'

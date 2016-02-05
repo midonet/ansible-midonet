@@ -1,0 +1,46 @@
+---
+
+- name: Assign floating IP to controller node
+  neutron_floating_ip:
+     state: present
+     auth_url: "{{ os_auth_url }}"
+     instance_name: "{{ deployment_name }}-controller"
+     login_username: "{{ os_login_username }}"
+     login_password: "{{ os_login_password }}"
+     login_tenant_name: "{{ os_login_tenant }}"
+     network_name: "{{ os_external_net }}"
+  register: floating_ip_controller
+
+- name: Add controller node to hosts
+  add_host: >
+    name="{{ deployment_name }}-controller"
+    ansible_ssh_host={{floating_ip_controller.public_ip}}
+    ansible_ssh_user='{{ ssh_user }}'
+    groups=controller
+
+- name: Assign floating IP to Edge nodes
+  neutron_floating_ip:
+     state: present
+     auth_url: "{{ os_auth_url }}"
+     instance_name: "{{ deployment_name }}-edge-{{ item }}"
+     login_username: "{{ os_login_username }}"
+     login_password: "{{ os_login_password }}"
+     login_tenant_name: "{{ os_login_tenant }}"
+     network_name: "{{ os_external_net }}"
+     port_network_name: "{{ os_net_name }}"
+  register: floating_ip_edge
+  with_sequence: count={{ num_edge_nodes }} start=0
+
+- name: Add Edge nodes to hosts
+  add_host: >
+    name="{{ deployment_name }}-edge-{{ item.item }}"
+    ansible_ssh_host="{{ item.public_ip }}"
+    ansible_ssh_user='{{ ssh_user }}'
+    groups=edge
+  with_items: floating_ip_edge.results
+
+- name: Wait until all goes up
+  wait_for: host={{ hostvars[item]['ansible_ssh_host'] }} port=22 state=present
+  with_items: groups['all'] 
+  when: item != "localhost"
+

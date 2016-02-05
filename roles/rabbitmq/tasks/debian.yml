@@ -1,0 +1,16 @@
+---
+- name: Install RabbitMQ packages
+  apt:
+    pkg: rabbitmq-server
+    update_cache: yes
+
+- name: Set rabbitmq password
+  shell: "rabbitmqctl change_password guest {{ admin_password }}"
+
+- name: Copy guest config
+  copy: src=rabbitmq.config dest=/etc/rabbitmq/rabbitmq.config
+
+- name: Ensure RabbitMQ service is running
+  service:
+    name: rabbitmq-server
+    state: restarted

@@ -1,0 +1,180 @@
+---
+
+- name: Get controller and edges
+  hosts: localhost
+  connection: local
+  vars_files:
+  - vars/{{ deploy }}.yml
+  - vars/defaults.yml
+  - "{{ os_settings | default('vars/os_settings.yml') }}"
+  tasks:
+  - include: tasks/get-controller-edges.yml
+
+  - name: Add exterior host to contact the VM
+    add_host: name="{{ external_host }}" groups=external ansible_ssh_user=ubuntu
+
+
+- name: Gather facts
+  hosts: all:!localhost
+  gather_facts: yes
+
+
+- name: controller
+  hosts: controller
+  vars_files:
+  - vars/{{ deploy }}.yml
+  - vars/defaults.yml
+  - "{{ os_settings | default('vars/os_settings.yml') }}"
+  become: True
+  vars:
+    keystone_env:
+      OS_USERNAME: admin
+      OS_TENANT_NAME: admin
+      OS_PASSWORD:  "{{ admin_password }}"
+      OS_AUTH_URL: http://localhost:35357/v2.0/
+  tasks:
+
+  - name: create internal network for admin
+    neutron_network: name=internal_network
+                     state=present
+                     login_username=admin
+                     login_tenant_name=admin
+                     tenant_name=admin
+                     login_password={{ admin_pass }}
+    register: internal_network
+
+  - debug: var=internal_network
+
+  - name: create internal subnet
+    neutron_subnet: name=internal_subnet
+                    state=present
+                    cidr="10.20.30.0/24"
+                    network_name=internal_network
+                    login_username=admin
+                    login_tenant_name=admin
+                    tenant_name=admin
+                    login_password={{ admin_pass }}
+    register: internal_subnet
+
+  - name: create interal router
+    neutron_router: name=internal_router
+                    state=present
+                    login_username=admin
+                    login_tenant_name=admin
+                    tenant_name=admin
+                    login_password={{ admin_pass }}
+
+  - name: attach router gateway
+    neutron_router_gateway: state=present
+                            router_name=internal_router
+                            network_name=public
+                            login_username=admin
+                            login_tenant_name=admin
+                            login_password={{ admin_pass }}
+
+  - name: add router interface
+    neutron_router_interface: state=present
+                              router_name=internal_router
+                              subnet_name=internal_subnet
+                              login_username=admin
+                              login_tenant_name=admin
+                              tenant_name=admin
+                              login_password={{ admin_pass }}
+
+  - name: Re-use CirrOS image
+    glance:
+      name: "CirrOS 0.3.3"
+      file: /dev/null
+      format: qcow2
+      is_public: true
+      username: admin
+      tenant_name: admin
+      password: "{{ admin_pass }}"
+      auth_url: "http://127.0.0.1:35357/v2.0/"
+    register: cirros
+
+  - name: Create/use nano flavor
+    nova_flavor:
+      login_username: admin
+      login_password: "{{ admin_pass }}"
+      login_tenant_name: admin
+      name: nano
+      ram: 64
+      vcpus: 1
+      disk: 0
+    register: flavor
+
+  - name: Check if sec group is created
+    shell: neutron security-group-list | grep basic-test
+    register: sg
+    environment: keystone_env
+    ignore_errors: true
+
+  - name: Create sec group
+    shell: neutron security-group-create basic-test
+    environment: keystone_env
+    when: sg|failed
+
+  - name: Check if ICMP sec group is created
+    shell: neutron security-group-rule-list | grep basic-test | grep -E 'ingress.*icmp.*0.0.0.0/0'
+    register: sg_icmp
+    environment: keystone_env
+    ignore_errors: true
+
+  - name: Create sec group for ICMP
+    shell: neutron security-group-rule-create --direction ingress --ethertype IPv4 --protocol icmp --remote-ip-prefix 0.0.0.0/0 basic-test
+    environment: keystone_env
+    when: sg_icmp|failed
+
+  - name: Check if SSH sec group is created
+    shell: neutron security-group-rule-list | grep basic-test | grep -E 'ingress.*tcp.*0.0.0.0/0'
+    register: sg_ssh
+    environment: keystone_env
+    ignore_errors: true
+
+  - name: Create sec group for SSH
+    shell: neutron security-group-rule-create --direction ingress --ethertype IPv4 --protocol tcp --port-range-min 22 --port-range-max 22 --remote-ip-prefix 0.0.0.0/0 basic-test
+    environment: keystone_env
+    when: sg_ssh|failed
+
+  - name: create test instance
+    nova_compute:
+      state: present
+      name: test_instance
+      image_id: "{{ cirros.id }}"
+      flavor_id: "{{ flavor.id }}"
+      nics:
+        - net-id: "{{ internal_network.id }}"
+      login_username: admin
+      login_tenant_name: admin
+      login_password: "{{ admin_pass }}"
+      security_groups: basic-test
+
+  - name: assign floating ip to test instance
+    neutron_floating_ip:
+     state: present
+     instance_name: test_instance
+     login_username: admin
+     login_password: "{{ admin_pass }}"
+     login_tenant_name: admin
+     network_name: public
+    register: floating_ip
+
+  - debug: var=floating_ip
+
+  - name: store floating ip
+    set_fact: testvm_ip="{{ floating_ip.public_ip }}"
+
+- name: Exterior check
+  hosts: external
+  vars_files:
+  - vars/{{ deploy }}.yml
+  - vars/defaults.yml
+  - "{{ os_settings | default('vars/os_settings.yml') }}"
+  vars:
+    controller_host: "{{ deployment_name }}-controller"
+  become: True
+  tasks:
+
+  - name: wait for test instance to be up
+    wait_for: port=22 host="{{ hostvars[controller_host]['testvm_ip'] }}" delay=10 state=present

@@ -1,0 +1,21 @@
+---
+deployment_name   : centos7-50-liberty
+num_nsdb_nodes    : 3
+num_comp_nodes    : 3
+num_edge_nodes    : "{{ os_edges_net_id | length }}"
+admin_password    : somepassword
+yum_user          : yum_user
+yum_password      : yum_pass
+midonet_version   : '5.0'
+openstack_version : liberty
+os_virt_type      : qemu
+public_subnet_cidr: 200.200.200.224/24
+ssh_user          : centos
+midonet_repo      : "midonet-{{ midonet_version.split(\".\")[0] }}"
+midonet_dist      : stable
+midonet_os_dist   : stable
+midonet_os_repo   : "openstack-{{openstack_version}}"
+
+
+# Set if deploying on OpenStack
+os_image_id       : a0476f7b-7f5f-48ee-a0c2-d2eac47eea90

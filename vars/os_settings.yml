@@ -1,0 +1,19 @@
+---
+# These are examples, use your own settings
+
+os_auth_url       : http://192.168.100.11:35357/v2.0/
+os_login_username : gaspar
+os_login_password : xxxxxx
+os_login_tenant   : SomeTenant
+os_key_name       : mykey
+os_net_id         : 7966aa25-5a63-42cf-8498-d56296c8b90f
+os_net_name       : mynetwork
+os_external_net   : external
+os_edges_net_id:
+  - 583c54f8-7ef0-44d7-8b13-ddf6a5306625
+  - 583c54f8-7ef0-44d7-8b13-ddf6a5306625
+bgp1_peer_ip      : 127.0.0.1
+bgp2_peer_ip      : 127.0.0.1
+
+# moved to ditribution vars
+# os_image_id       : 6922705e-4354-4913-a74f-954b5f7be2f2

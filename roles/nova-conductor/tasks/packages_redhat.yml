@@ -1,0 +1,6 @@
+---
+
+- name: Install nova conductor
+  yum: name="{{ item }}" state=present
+  with_items:
+    - openstack-nova-conductor

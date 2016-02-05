@@ -1,0 +1,13 @@
+{{ hostvars.localhost.floating_ip_controller.public_ip }} {{ deployment_name }}-controller
+
+{% for compute in hostvars.localhost.floating_ip_compute.results %}
+{{ compute.public_ip }} {{ deployment_name }}-comp-{{ compute.item }}
+{% endfor %}
+
+{% for nsdb in hostvars.localhost.floating_ip_nsdb.results %}
+{{ nsdb.public_ip }} {{ deployment_name }}-nsdb-{{ nsdb.item }}
+{% endfor %}
+
+{% for edge in hostvars.localhost.floating_ip_edge.results %}
+{{ edge.public_ip }} {{ deployment_name }}-edge-{{ edge.item }}
+{% endfor %}

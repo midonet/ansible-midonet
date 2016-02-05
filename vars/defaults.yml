@@ -1,0 +1,44 @@
+---
+
+mgmt_iface        : eth0
+mgmt_ip           : "{{ ansible_default_ipv4['address'] }}"
+mysql_rootpass: "{{ admin_password }}"
+keystone_dbpass: "{{ admin_password }}"
+admin_token: 'somelongtesttoken'
+admin_pass: "{{ admin_password }}"
+demo_pass: "{{ admin_password }}"
+rabbit_username: "guest"
+rabbit_pass: "{{ admin_password }}"
+keystone_hostname: "{{ mgmt_ip }}"
+glance_pass: "{{ admin_password }}"
+glance_dbpass: "{{ admin_password }}"
+glance_hostname: "{{ mgmt_ip }}"
+nova_conductor_dbpass: "{{ admin_password }}"
+console_public_hostname: "{{ mgmt_ip }}"
+metadata_secret: "somesecret"
+nova_api_hostname: "{{ mgmt_ip }}"
+nova_pass: "{{ admin_password }}"
+neutron_dbpass: "{{ admin_password }}"
+neutron_server_hostname: "{{ mgmt_ip }}"
+neutron_pass: "{{ admin_password }}"
+my_ip: "{{ mgmt_ip }}"
+mysql_listen_ip: 0.0.0.0
+mm_version: default
+plugin_version: default
+plugin_dist: stable
+enable_ml2_plugin: false
+midonet_metadata : true
+tzone_type       : vxlan
+external_host    : localhost
+
+# Loglevel setting for services to deploy, e.g midonet-cluster,
+# neutron-server, etc.
+# By default, it does not touch anything.
+# If set to "debug", change loglevel settings to debug mode.
+loglevel: default
+
+# package repo related settings
+repo_url_base: http://builds.midonet.org/
+pkg_pubkey_url: "{{ repo_url_base }}midorepo.key"
+
+midonet_misc_repo: misc

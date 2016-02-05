@@ -1,0 +1,34 @@
+---
+
+- name: "Dump service list"
+  shell: keystone service-list
+  register: service_list
+  changed_when: false
+  environment: '{{ openstack_service_env }}'
+
+- name: "Dump endpoint list"
+  shell: keystone endpoint-list
+  register: endpoint_list
+  changed_when: false
+  environment: '{{ openstack_service_env }}'
+
+- name: Create the service entity for the network service
+  shell: keystone service-create --name neutron --type network --description="OpenStack Network Service"
+  environment: '{{ openstack_service_env }}'
+  when: "service_list.stdout.find('neutron') == -1"
+
+- name: "Dump network service id"
+  shell: keystone service-list | awk '/ network / {print $2}'
+  register: network_service_id
+  changed_when: false
+  environment: '{{ openstack_service_env }}'
+
+- name: Create the API endpoint for the network service
+  shell: >
+    keystone endpoint-create \
+      --service-id={{ network_service_id.stdout }} \
+      --publicurl={{ neutron_protocol }}://{{ neutron_server_hostname }}:{{ neutron_port }} \
+      --internalurl={{ neutron_protocol }}://{{ neutron_server_hostname }}:{{ neutron_port }} \
+      --adminurl={{ neutron_protocol }}://{{ neutron_server_hostname }}:{{ neutron_port }}
+  when: "endpoint_list.stdout.find('{{ network_service_id.stdout }}') == -1"
+  environment: '{{ openstack_service_env }}'

@@ -1,0 +1,10 @@
+---
+
+- name: Restart nova compute
+  service: name={{ nova_compute_service }} state=restarted
+
+- name: Restart midolman
+  service: name=midolman state=restarted
+
+- name: Restart libvirt
+  service: name={{ libvirt_service }} state=restarted

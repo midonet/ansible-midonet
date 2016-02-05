@@ -1,0 +1,55 @@
+# tasks/create-single-instance.yml
+# Creates a new VM and attaches to a network and passes metadata to the instance
+---
+
+# One single node
+- name: Launch allinone node
+  nova_compute:
+     state: present
+     auth_url: "{{ os_auth_url }}"
+     login_username: "{{ os_login_username }}"
+     login_password: "{{ os_login_password }}"
+     login_tenant_name: "{{ os_login_tenant }}"
+     name: "{{ deployment_name }}-allinone"
+     image_id: "{{ os_image_id }}"
+     key_name: "{{ os_key_name }}"
+     wait_for: 500
+     flavor_id: 16
+     nics:
+       - net-id: "{{ os_net_id }}"
+  register: allinone
+
+
+- name: Assign floating IP to allinone node
+  neutron_floating_ip:
+     state: present
+     auth_url: "{{ os_auth_url }}"
+     instance_name: "{{ deployment_name }}-allinone"
+     login_username: "{{ os_login_username }}"
+     login_password: "{{ os_login_password }}"
+     login_tenant_name: "{{ os_login_tenant }}"
+     network_name: "{{ os_external_net }}"
+  register: floating_ip_allinone
+  tags: ct
+
+- debug: var=floating_ip_allinone
+
+- name: Add floating_ip fact
+  set_fact:
+    floating_ip_allinone: "{{floating_ip_allinone}}"
+
+- name: Add allinone node to hosts
+  add_host: >
+    name="{{ deployment_name }}-allinone"
+    ansible_ssh_host={{floating_ip_allinone.public_ip}}
+    ansible_ssh_user='{{ ssh_user }}'
+    myid="1"
+    groups=allinone,controller,nsdb,compute
+
+- name: Wait until all goes up
+  wait_for: host={{ hostvars[item]['ansible_ssh_host'] }} port=22 state=present
+  with_items: groups['all']
+  when: item != "localhost"
+
+- name: Stupid Pause
+  pause: seconds=30

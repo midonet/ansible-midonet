@@ -1,0 +1,3 @@
+[submodule "tools/ansible/openstack-ansible-modules"]
+	path = openstack-ansible-modules
+	url = git://github.com/openstack-ansible/openstack-ansible-modules.git

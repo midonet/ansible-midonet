@@ -1,0 +1,23 @@
+*.py[cod]
+*~
+nosetests.xml
+tags
+mdts/tests/functional_tests/nosetests*.log
+
+# IntelliJ Idea
+/.idea/
+/idea/
+/*.iml
+/*.iws
+/*/*.iml
+
+# Idea also uses *.ipr and *.iws files, which should be added here when
+# we see them and know what paths they use.
+#
+# Eclipse
+/.classpath
+/.project
+/.settings/
+/*/.classpath
+/*/.project
+/*/.settings/

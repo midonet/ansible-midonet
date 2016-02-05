@@ -1,0 +1,10 @@
+---
+
+
+- name: Set service facts
+  set_fact: nova_scheduler_service="nova-scheduler"
+  when: ansible_os_family == 'Debian'
+
+- name: Set service facts
+  set_fact: nova_scheduler_service="openstack-nova-scheduler"
+  when: ansible_os_family == 'RedHat'

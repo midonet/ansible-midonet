@@ -1,0 +1,58 @@
+---
+- name: Set facts
+  set_fact: mysql_service=mysql
+
+- name: Install MariaDB packages
+  apt:
+    pkg: "{{ item }}"
+    update_cache: yes
+  with_items:
+    - mariadb-server
+    - mariadb-client
+    - python-mysqldb
+  notify:
+    - Restart mysql
+
+- name: Set mysql password
+  shell: "mysqladmin -u root password {{ admin_password }}"
+  ignore_errors: yes
+
+- name: Set MySQL max connections
+  ini_file: dest=/etc/mysql/my.cnf section=mysqld option=max_connections value='1024'
+  notify:
+    - Restart mysql
+
+- name: Set MySQL listen address
+  ini_file: dest=/etc/mysql/my.cnf section=mysqld option=bind-address value={{ my_ip }}
+  notify:
+    - Restart mysql
+
+- name: Set MySQL listen address
+  ini_file: dest=/etc/mysql/my.cnf section=mysqld option={{ item.option }} value={{ item.value }} backup=yes
+  with_items:
+    - { option: 'default-storage-engine', value: 'innodb' }
+    - { option: 'innodb_file_per_table', value: '1' }
+    - { option: 'collation-server', value: 'utf8_general_ci' }
+    - { option: 'init-connect', value: "'SET NAMES utf8'" }
+    - { option: 'character-set-server', value: 'utf8' }
+  when: ubuntu_version == 'precise'
+  notify:
+    - Restart mysql
+
+
+- name: Add openstack mysql config
+  copy: src=openstack.cnf dest=/etc/mysql/conf.d/openstack.cnf
+  when: ubuntu_version != 'precise'
+  notify:
+    - Restart mysql
+
+- name: Grant privileges to local ip
+  mysql_user:
+    login_user: root
+    login_password: "{{ admin_password }}"
+    name: root
+    password: "{{ admin_password }}"
+    append_privs: true
+    priv: "*.*:ALL,GRANT"
+    host: "{{ my_ip }}"
+    state: present

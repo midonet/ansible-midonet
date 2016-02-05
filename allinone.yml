@@ -1,0 +1,43 @@
+---
+# This playbook deploys the whole application stack in this site.
+
+- hosts: localhost
+  vars_files:
+  - vars/{{ deploy }}.yml
+  - vars/defaults.yml
+  - "{{ os_settings | default('vars/os_settings.yml') }}"
+  become: True
+  pre_tasks:
+  roles:
+  - role: common
+    http_proxy: ""
+  - midorepo
+  - role: zookeeper
+    myid: 1
+  - cassandra
+  - mysql
+  - rabbitmq
+  - keystone
+  - glance
+  - neutron-server
+  - neutron-dhcp-agent
+  - nova-conductor
+  - nova-consoleauth
+  - nova-api
+  - nova-novncproxy
+  - nova-scheduler
+  - horizon
+  - midorepo
+  - midonet-cluster
+  - role: nova-compute
+    vncserver_proxy_address: "{{ ansible_ssh_host }}" # trick for floating ip
+  - role: controller_post
+    public_ip: "{{ ansible_ssh_host }}"
+  - role: compute_post
+    controller_host: "bcn11"
+    midonet_api_hostname: "{{ mgmt_ip }}"
+    keystone_hostname: "{{ mgmt_ip }}"
+  - role: midolman
+    agent_template: 'agent-compute-medium'
+    midonet_api_hostname: "{{ mgmt_ip }}"
+  # - fake_uplink

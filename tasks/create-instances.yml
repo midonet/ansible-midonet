@@ -1,0 +1,195 @@
+# tasks/create-instances.yml
+# Creates a new VM and attaches to a network and passes metadata to the instance
+---
+
+# Controller
+- name: Launch controller node
+  nova_compute:
+     state: present
+     auth_url: "{{ os_auth_url }}"
+     login_username: "{{ os_login_username }}"
+     login_password: "{{ os_login_password }}"
+     login_tenant_name: "{{ os_login_tenant }}"
+     name: "{{ deployment_name }}-controller"
+     image_id: "{{ os_image_id }}"
+     key_name: "{{ os_key_name }}"
+     wait_for: 500
+     flavor_id: 11
+     nics:
+       - net-id: "{{ os_net_id }}"
+  register: controller
+  tags: ct
+
+- name: Assign floating IP to controller node
+  neutron_floating_ip:
+     state: present
+     auth_url: "{{ os_auth_url }}"
+     instance_name: "{{ deployment_name }}-controller"
+     login_username: "{{ os_login_username }}"
+     login_password: "{{ os_login_password }}"
+     login_tenant_name: "{{ os_login_tenant }}"
+     network_name: "{{ os_external_net }}"
+  register: floating_ip_controller
+  tags: ct
+
+- name: Add controller node to hosts
+  add_host: >
+    name="{{ deployment_name }}-controller"
+    ansible_ssh_host={{floating_ip_controller.public_ip}}
+    ansible_ssh_user='{{ ssh_user }}'
+    groups=controller
+  tags: ct
+
+- debug: var=floating_ip_controller
+
+- name: Add controller floating_ip fact
+  set_fact:
+    floating_ip_controller: "{{floating_ip_controller}}"
+
+# NSDB
+- name: Launch NSDB nodes
+  nova_compute:
+     state: present
+     auth_url: "{{ os_auth_url }}"
+     login_username: "{{ os_login_username }}"
+     login_password: "{{ os_login_password }}"
+     login_tenant_name: "{{ os_login_tenant }}"
+     name: "{{ deployment_name }}-nsdb-{{ item }}"
+     image_id: "{{ os_image_id }}"
+     key_name: "{{ os_key_name }}"
+     wait_for: 500
+     flavor_id: 7
+     nics:
+       - net-id: "{{ os_net_id }}"
+  register: nsdb
+  with_sequence: count={{ num_nsdb_nodes }}
+  tags: nsdb
+
+- name: Assign floating IP to nsdb nodes
+  neutron_floating_ip:
+     state: present
+     auth_url: "{{ os_auth_url }}"
+     instance_name: "{{ deployment_name }}-nsdb-{{ item }}"
+     login_username: "{{ os_login_username }}"
+     login_password: "{{ os_login_password }}"
+     login_tenant_name: "{{ os_login_tenant }}"
+     network_name: "{{ os_external_net }}"
+  register: floating_ip_nsdb
+  with_sequence: count={{ num_nsdb_nodes }}
+  tags: nsdb
+
+- debug: var=floating_ip_nsdb
+
+- name: Add NSDB node to hosts
+  add_host: >
+    name="{{ deployment_name }}-nsdb-{{ item.item }}"
+    ansible_ssh_host="{{ item.public_ip }}"
+    ansible_ssh_user='{{ ssh_user }}'
+    groups=nsdb
+    myid="{{ item.item }}"
+  with_items: floating_ip_nsdb.results
+  tags: nsdb
+
+- name: Add nsdb floating_ip fact
+  set_fact:
+    floating_ip_nsdb: "{{ floating_ip_nsdb }}"
+
+# Compute Nodes
+- name: Launch Compute nodes
+  nova_compute:
+     state: present
+     auth_url: "{{ os_auth_url }}"
+     login_username: "{{ os_login_username }}"
+     login_password: "{{ os_login_password }}"
+     login_tenant_name: "{{ os_login_tenant }}"
+     name: "{{ deployment_name }}-comp-{{ item }}"
+     image_id: "{{ os_image_id }}"
+     key_name: "{{ os_key_name }}"
+     wait_for: 500
+     flavor_id: 7
+     nics:
+       - net-id: "{{ os_net_id }}"
+  register: compute
+  with_sequence: count={{ num_comp_nodes }}
+  tags: cp
+
+- name: Assign floating IP to Compute nodes
+  neutron_floating_ip:
+     state: present
+     auth_url: "{{ os_auth_url }}"
+     instance_name: "{{ deployment_name }}-comp-{{ item }}"
+     login_username: "{{ os_login_username }}"
+     login_password: "{{ os_login_password }}"
+     login_tenant_name: "{{ os_login_tenant }}"
+     network_name: "{{ os_external_net }}"
+  register: floating_ip_compute
+  with_sequence: count={{ num_comp_nodes }}
+  tags: cp
+
+- debug: var=floating_ip_compute
+  tags: cp
+
+- name: Add Compute nodes to hosts
+  add_host: >
+    name="{{ deployment_name }}-comp-{{ item.item }}"
+    ansible_ssh_host="{{ item.public_ip }}"
+    ansible_ssh_user='{{ ssh_user }}'
+    groups=compute
+  with_items: floating_ip_compute.results
+  tags: cp
+
+- name: Add computes floating_ip fact
+  set_fact:
+    floating_ip_compute: "{{ floating_ip_compute }}"
+
+# Edges
+- name: Launch Edge nodes
+  nova_compute:
+     state: present
+     auth_url: "{{ os_auth_url }}"
+     login_username: "{{ os_login_username }}"
+     login_password: "{{ os_login_password }}"
+     login_tenant_name: "{{ os_login_tenant }}"
+     name: "{{ deployment_name }}-edge-{{ item.0 }}"
+     image_id: "{{ os_image_id }}"
+     key_name: "{{ os_key_name }}"
+     wait_for: 500
+     flavor_id: 7
+     nics:
+       - net-id: "{{ os_net_id }}"
+       - net-id: "{{ item.1 }}"
+  register: edge
+  with_indexed_items: "{{ os_edges_net_id }}"
+
+- name: Assign floating IP to Edge nodes
+  neutron_floating_ip:
+     state: present
+     auth_url: "{{ os_auth_url }}"
+     instance_name: "{{ deployment_name }}-edge-{{ item }}"
+     login_username: "{{ os_login_username }}"
+     login_password: "{{ os_login_password }}"
+     login_tenant_name: "{{ os_login_tenant }}"
+     network_name: "{{ os_external_net }}"
+     port_network_name: "{{ os_net_name }}"
+  register: floating_ip_edge
+  with_sequence: count={{ num_edge_nodes }} start=0
+
+- debug: var=floating_ip_edge
+
+- name: Add Edge nodes to hosts
+  add_host: >
+    name="{{ deployment_name }}-edge-{{ item.item }}"
+    ansible_ssh_host="{{ item.public_ip }}"
+    ansible_ssh_user='{{ ssh_user }}'
+    groups=edge
+  with_items: floating_ip_edge.results
+
+- name: Add edges floating_ip fact
+  set_fact:
+    floating_ip_edge: "{{ floating_ip_edge }}"
+
+
+- name: Wait until all goes up
+  wait_for: host={{ hostvars[item]['ansible_ssh_host'] }} port=22 state=started timeout=600
+  with_items: groups['all']
+  when: item != "localhost"

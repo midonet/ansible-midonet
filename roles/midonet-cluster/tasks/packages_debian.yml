@@ -1,0 +1,9 @@
+---
+
+- name: Install Midonet Cluster
+  apt: name=midonet-cluster state=present update_cache=yes
+  when: mm_version is not defined or mm_version == "default"
+
+- name: Install Midonet Cluster
+  apt: name=midonet-cluster=0:{{mm_version}} state=present update_cache=yes
+  when: mm_version is defined and mm_version != "default"

@@ -1,0 +1,46 @@
+---
+# This playbook deploys the whole application stack in this site.
+
+- hosts: localhost
+  vars:
+    allinone: True
+  vars_files:
+  - vars/{{ deploy }}.yml
+  - vars/defaults.yml
+  - "{{ os_settings | default('vars/os_settings.yml') }}"
+  become: True
+  pre_tasks:
+  - name: add localhost to cassandra group
+    add_host: name="localhost" groups=nsdb
+  roles:
+  - role: common
+  - midorepo
+  - role: zookeeper
+    myid: 1
+  - cassandra
+  - mysql
+  - rabbitmq
+  - keystone
+  - glance
+  - neutron-server
+  - role: neutron-dhcp-agent
+    when: midonet_metadata is defined and (midonet_metadata|bool == False)
+  - nova-conductor
+  - nova-consoleauth
+  - nova-api
+  - nova-novncproxy
+  - nova-scheduler
+  - horizon
+  - midorepo
+  - midonet-cluster
+  - role: midolman
+    agent_template: 'agent-compute-medium'
+    midonet_api_hostname: "{{ mgmt_ip }}"
+  - role: nova-compute
+    vncserver_proxyclient_address: "{{ mgmt_ip }}" # trick for floating ip
+  - role: controller_post
+    public_ip: "{{ mgmt_ip }}" # trick for floating ip
+  - role: compute_post
+    midonet_api_hostname: "{{ mgmt_ip }}"
+    keystone_hostname: "{{ mgmt_ip }}"
+  - fake_uplink

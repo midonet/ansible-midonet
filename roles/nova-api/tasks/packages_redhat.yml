@@ -1,0 +1,6 @@
+---
+
+- name: Install nova api
+  yum: name="{{ item }}" state=present
+  with_items:
+    - openstack-nova-api

@@ -1,0 +1,50 @@
+---
+
+
+- name: Set service facts
+  set_fact:
+    apache2_service: "apache2"
+    nova_api_service: "nova-api"
+    nova_conductor_service: "nova-conductor"
+    nova_scheduler_service: "nova-scheduler"
+    nova_consoleauth_service: "nova-consoleauth"
+  when: ansible_os_family == 'Debian'
+
+- name: Set service facts
+  set_fact:
+    apache2_service: "httpd"
+    nova_api_service: "openstack-nova-api"
+    nova_conductor_service: "openstack-nova-conductor"
+    nova_scheduler_service: "openstack-nova-scheduler"
+    nova_consoleauth_service: "openstack-nova-consoleauth"
+  when: ansible_os_family == 'RedHat'
+
+- name: Set midonet plugin
+  set_fact:
+    midonet_plugin: "midonet.neutron.plugin_v2.MidonetPluginV2"
+
+- name: Set neutron service plugin
+  set_fact:
+    service_plugin: |
+      "midonet.neutron.services.l3.l3_midonet.MidonetL3ServicePlugin,neutron_lbaas.services.loadbalancer.plugin.LoadBalancerPlugin"
+  when: openstack_version != 'kilo'
+
+- name: Set neutron service plugin
+  set_fact:
+    service_plugin: "lbaas"
+  when: openstack_version == 'kilo'
+
+- name: Set neutron service plugin
+  set_fact:
+    service_plugin: |
+      "midonet.neutron.services.l3.l3_midonet.MidonetL3ServicePlugin,neutron_lbaas.services.loadbalancer.plugin.LoadBalancerPlugin"
+  when: openstack_version != 'kilo'
+
+- name: Set neutron service plugin
+  set_fact:
+    service_plugin: "lbaas"
+  when: openstack_version == 'kilo'
+
+- name: Set midonet ML2 plugin
+  set_fact:
+    midonet_ml2_plugin: neutron.plugins.ml2.plugin.Ml2Plugin

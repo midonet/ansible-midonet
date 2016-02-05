@@ -1,0 +1,3 @@
+---
+controller_host: "{{ deployment_name }}-controller"
+midonet_api_hostname: "{{ hostvars[controller_host]['ansible_' + mgmt_iface]['ipv4']['address'] }}"
