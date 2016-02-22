@@ -1,0 +1,11 @@
+---
+
+- name: Configure midonet API config file
+  template: src=web.xml.j2 dest=/usr/share/midonet-api/WEB-INF/web.xml
+  notify:
+      - Restart tomcat
+
+- name: Copy midonet-api xml file
+  copy: src=midonet-api.xml dest=/etc/{{ tomcat_name }}/Catalina/localhost/midonet-api.xml
+  notify:
+      - Restart tomcat

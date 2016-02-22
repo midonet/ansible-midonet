@@ -1,0 +1,19 @@
+---
+
+- name: Install Midolman
+  apt: name=midolman state=latest install_recommends=no update_cache=yes
+  sudo: yes
+  when: mm_version is not defined or mm_version == "default"
+
+- name: Install midonet client
+  apt: name=python-midonetclient state=present
+  when: mm_version is not defined or mm_version == "default"
+
+- name: Install Midolman
+  apt: name=midolman=0:{{mm_version}}  state=present install_recommends=no update_cache=yes
+  sudo: yes
+  when: mm_version is defined and mm_version != "default"
+
+- name: Install midonet client
+  shell: sudo apt-get install -qy --force-yes python-midonetclient={{mm_version}}
+  when: mm_version is defined and mm_version != "default"

@@ -1,0 +1,16 @@
+---
+
+- name: Set tomcat name
+  set_fact:
+    tomcat_name: "tomcat7"
+  when: ansible_os_family == 'Debian'
+
+- name: Set tomcat package
+  set_fact:
+    tomcat_name: "tomcat"
+  when: ansible_os_family == 'RedHat' and ansible_distribution_version.split(".")[0] == '7'
+
+- name: Set tomcat package
+  set_fact:
+    tomcat_name: "tomcat6"
+  when: ansible_os_family == 'RedHat' and ansible_distribution_version.split(".")[0] == '6'

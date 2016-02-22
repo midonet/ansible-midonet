@@ -1,0 +1,8 @@
+---
+
+- name: Add admin role to neutron user in service tenant
+  keystone_user: role=admin
+                 user=neutron
+                 tenant=service
+                 endpoint="{{ keystone_protocol }}://{{ keystone_hostname }}:{{ keystone_admin_port }}/v2.0"
+                 token="{{ admin_token }}"

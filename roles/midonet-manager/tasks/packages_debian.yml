@@ -1,0 +1,4 @@
+---
+
+- name: Install Midonet Manager
+  apt: name=midonet-manager state=present

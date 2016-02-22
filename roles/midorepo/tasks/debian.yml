@@ -1,0 +1,25 @@
+---
+
+- name: Install Package public key
+  apt_key: url={{pkg_pubkey_url}}
+  retries: 3
+
+# We need this for openstack and misc repos even with debian_pkg_path
+- name: Configure apt repo for MidoNet
+  template: src=midonet.list.j2 dest=/etc/apt/sources.list.d/midonet.list
+
+- name: Install dpkg-dev tools (debian local repo)
+  apt: name=dpkg-dev state=latest update_cache=yes
+  when: debian_pkg_path is defined
+
+- name: Allow unauthenticated packages (debian local repo)
+  template: src=midokura.local.aptconf.j2 dest=/etc/apt/apt.conf.d/99allowunathenticated
+  when: debian_pkg_path is defined
+
+- name: Create local repo metadata (debian local repo)
+  shell: (cd {{ debian_pkg_path }} && dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz)
+  when: debian_pkg_path is defined
+
+- name: Create local repo template (debian local repo)
+  template: src=midokura.local.list.j2 dest=/etc/apt/sources.list.d/midokura-local.list
+  when: debian_pkg_path is defined

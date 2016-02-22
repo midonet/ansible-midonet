@@ -1,0 +1,11 @@
+[DATABASE]
+sql_connection = mysql+mysqlconnector://neutron:{{ admin_pass }}@{{ mgmt_ip }}/neutron
+sql_max_retries = 100
+
+[MIDONET]
+midonet_uri = http://{{ mgmt_ip }}:8080/midonet-api
+username = admin
+password = {{ admin_pass }}
+project_id = admin
+auth_url = http://{{ mgmt_ip }}:5000/v2.0
+provider_router_id =

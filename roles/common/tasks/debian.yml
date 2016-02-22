@@ -1,0 +1,35 @@
+---
+
+- name: Add apt proxy
+  template: src=02proxy.j2 dest=/etc/apt/apt.conf.d/02proxy
+  when:
+  - http_proxy is defined and http_proxy != ""
+
+- name: No apt proxy
+  file: path=/etc/apt/apt.conf.d/02proxy state=absent
+  when:
+  - http_proxy is not defined
+
+# TODO: Use lineinfile here
+- name: Add local hostname
+  command: sed -i '/127.0.0.1 localhost$/ s/$/ '{{ ansible_hostname }}'/' /etc/hosts
+
+- name: No apt proxy
+  file: path=/etc/apt/apt.conf.d/02proxy state=absent
+  when:
+  - http_proxy is not defined
+
+
+- name: Add openstack APT repo
+  shell: "echo 'deb http://ubuntu-cloud.archive.canonical.com/ubuntu trusty-updates/{{openstack_version}} main' > /etc/apt/sources.list.d/ubuntu-cloud-archive-{{openstack_version}}-trusty.list"
+
+- name: Add openstack cloud ring
+  apt: name=ubuntu-cloud-keyring state=present
+
+- name: Update APT cache
+  apt: update_cache=yes
+
+
+- name: Add interface config
+  template: src=interface.j2 dest=/etc/network/interfaces.d/{{ item }}.cfg
+  with_items: ansible_interfaces

@@ -1,0 +1,9 @@
+---
+
+- name: Create keystone neutron user in service tenant
+  keystone_user: user=neutron
+                 tenant=service
+                 password="{{ neutron_pass }}"
+                 email=neutron@localhost
+                 endpoint="{{ keystone_protocol }}://{{ keystone_hostname }}:{{ keystone_admin_port }}/v2.0"
+                 token="{{ admin_token }}"

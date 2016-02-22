@@ -1,0 +1,7 @@
+- name: Set service facts
+  set_fact: nova_api_service="nova-api"
+  when: ansible_os_family == 'Debian'
+
+- name: Set service facts
+  set_fact: nova_api_service="openstack-nova-api"
+  when: ansible_os_family == 'RedHat'

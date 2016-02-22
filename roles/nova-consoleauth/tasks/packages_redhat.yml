@@ -1,0 +1,6 @@
+---
+
+- name: Install nova consoleauth
+  yum: name="{{ item }}" state=present
+  with_items:
+    - openstack-nova-console

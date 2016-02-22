@@ -1,0 +1,25 @@
+---
+
+- name: Restart neutron server
+  service: name=neutron-server state=restarted
+
+- name: Restart apache2
+  service: name={{ apache2_service }} state=restarted
+
+- name: Restart nova services
+  service: name={{ item }} state=restarted
+  with_items:
+    - "{{ nova_api_service }}"
+    - "{{ nova_scheduler_service }}"
+    - "{{ nova_conductor_service }}"
+    - "{{ nova_consoleauth_service }}"
+
+- name: Restart dhcp agent
+  service: name={{ item }} state=restarted
+  with_items:
+    - neutron-dhcp-agent
+
+- name: Restart metadata agent
+  service: name={{ item }} state=restarted
+  with_items:
+    - neutron-metadata-agent

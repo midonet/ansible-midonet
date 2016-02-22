@@ -1,0 +1,12 @@
+---
+
+- name: Remove useless SQLite db file
+  file: path=/var/lib/neutron/neutron.sqlite state=absent
+  when: ansible_os_family == 'Debian'
+
+- name: Upgrade neutron database 
+  shell: su -s /bin/sh -c "neutron-db-manage --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade head" neutron
+  notify:
+    - Restart neutron server
+
+

@@ -1,0 +1,15 @@
+---
+
+- name: Install Midolman
+  yum: name={{ item }} state=present
+  with_items:
+    - midolman
+    - python-midonetclient
+  when: mm_version is not defined or mm_version == "default"
+
+- name: Install Midolman
+  yum: name={{ item }} state=present
+  with_items:
+    - midolman-{{mm_version}}
+    - python-midonetclient-{{mm_version}}
+  when: mm_version is defined and mm_version != "default"

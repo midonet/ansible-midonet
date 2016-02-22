@@ -1,0 +1,149 @@
+---
+
+- name: Get edges
+  hosts: localhost
+  connection: local
+  vars_files:
+  - vars/{{ deploy }}.yml
+  - "{{ os_settings | default('vars/os_settings.yml') }}"
+  tasks:
+  - include: tasks/get-controller-edges.yml
+
+- name: Gather facts
+  hosts: all:!localhost
+  gather_facts: yes
+
+- name: edge
+  hosts: edge
+  sudo: yes
+  tasks:
+
+  - name: is eth1 up?
+    shell: "ifconfig | grep eth1"
+    register: is_eth1_up
+    ignore_errors: true
+
+  - name: eth1 down
+    shell: "ifdown eth1"
+    when: is_eth1_up|success
+
+  - name: eth1 up
+    shell: "ifup eth1"
+
+  - name: get eth1 ip address
+    shell: "ip route | grep eth1 | grep kernel | awk '{ print $9 }'"
+    register: eth1_address
+
+  - name: get eth1 net
+    shell: "ip route | grep eth1 | grep kernel | awk '{ print $1 }'"
+    register: eth1_net
+
+  - name: eth1 down
+    shell: "ifdown eth1"
+
+  - name: eth1 up without ip
+    shell: "ifconfig eth1 up"
+
+  - name: write ip address to hostvars
+    set_fact:
+      exterior_ip:  "{{ eth1_address.stdout }}"
+      exterior_net: "{{ eth1_net.stdout }}"
+
+
+- name: controller
+  hosts: controller
+  vars_files:
+  - vars/{{ deploy }}.yml
+  - "{{ os_settings | default('vars/os_settings.yml') }}"
+  sudo: yes
+  tasks:
+
+  - name: get provider router id
+    shell: "midonet-cli -e router list | grep \"MidoNet Provider Router\" | cut -d ' ' -f 2"
+    register: midonet_routerid
+    failed_when: midonet_routerid.stdout == ""
+
+  - name: get bgp ports
+    shell: "midonet-cli -e router {{ midonet_routerid.stdout }} port list | grep {{ hostvars[item]['exterior_ip'] }} | cut -d ' ' -f 2"
+    register: midonet_bgpport
+    with_items: groups['edge']
+
+  - name: add bgp port
+    shell: "midonet-cli -e router {{ midonet_routerid.stdout }} add port address {{ hostvars[item.1]['exterior_ip'] }} net {{ hostvars[item.1]['exterior_net'] }}"
+    register: midonet_bgpport
+    with_indexed_items: groups['edge']
+    when: midonet_bgpport.results[item.0].stdout == ""
+
+  - name: get bgp ports (again)
+    shell: "midonet-cli -e router {{ midonet_routerid.stdout }} port list | grep {{ hostvars[item]['exterior_ip'] }} | cut -d ' ' -f 2"
+    register: midonet_bgpport
+    with_items: groups['edge']
+
+  - name: get bgp config
+    shell: "midonet-cli -e router {{ midonet_routerid.stdout }} port {{ midonet_bgpport.results[item.0].stdout }} list bgp"
+    register: midonet_bgpconfig
+    with_indexed_items: groups['edge']
+
+  - name: add bgp config (peer hardcoded)
+    shell: "midonet-cli -e router {{ midonet_routerid.stdout }} port {{ midonet_bgpport.results[item.0].stdout }} add bgp local-AS 87654321 peer-AS 12345678 peer {{ hostvars[item.1]['exterior_net'] | replace ('0/24', '3') }}"
+    register: midonet_bgp
+    with_indexed_items: groups['edge']
+    when: midonet_bgpconfig.results[item.0].stdout == ""
+
+  - name: get bgp config (again)
+    shell: "midonet-cli -e router {{ midonet_routerid.stdout }} port {{ midonet_bgpport.results[item.0].stdout }} list bgp | cut -d ' ' -f 2"
+    register: midonet_bgpconfig
+    with_indexed_items: groups['edge']
+
+  - name: get bgp routes
+    shell: "midonet-cli -e router {{ midonet_routerid.stdout }} port {{ midonet_bgpport.results[item.0].stdout }} bgp {{ midonet_bgpconfig.results[item.0].stdout }} list route"
+    register: midonet_bgproutes
+    with_indexed_items: groups['edge']
+
+  - name: Get subnet prefix from local ip
+    shell: hostname -I | cut -d "." -f 4 | cut -d " " -f1
+    register: subnet_prefix
+
+  - name: add external route
+    shell: "midonet-cli -e router {{ midonet_routerid.stdout }} port {{ midonet_bgpport.results[item.0].stdout }} bgp {{ midonet_bgpconfig.results[item.0].stdout }} add route net 200.200.{{ subnet_prefix.stdout }}.0/24"
+    with_indexed_items: groups['edge']
+    when: midonet_bgproutes.results[item.0].stdout == ""
+
+  - name: list hosts
+    shell: "midonet-cli -e host list | grep -i {{ item }} | cut -d ' ' -f 2"
+    register: midonet_hosts
+    with_items: groups['edge']
+
+  - name: get bindings
+    shell: "midonet-cli -e host {{ midonet_hosts.results[item.0].stdout }} list binding"
+    register: midonet_bindings
+    with_indexed_items: groups['edge']
+    when: midonet_hosts.results[item.0].stdout != ""
+
+  - name: add bindings (hardcoded eth1)
+    shell: "midonet-cli -e host {{ midonet_hosts.results[item.0].stdout }} add binding port router {{ midonet_routerid.stdout }} port {{ midonet_bgpport.results[item.0].stdout }} interface eth1"
+    with_indexed_items: groups['edge']
+    when:
+    - midonet_hosts.results[item.0].stdout != ""
+    - midonet_bindings.results[item.0].stdout == ""
+
+  - name: is SPG created?
+    shell: "midonet-cli -e port-group list | grep SPG"
+    register: is_spg_created
+    ignore_errors: true
+
+  - name: create SPG
+    shell: "midonet-cli -e port-group create name SPG stateful true"
+    register: is_spg_supported
+    when: is_spg_created|failed
+    ignore_errors: true
+
+  - name: get SPG id
+    shell: "midonet-cli -e port-group list | grep SPG | cut -d ' ' -f 2"
+    register: spg_id
+    when: is_spg_supported|success
+
+  - name: add ports to SPG
+    shell: "midonet-cli -e port-group {{ spg_id.stdout }} add member port {{ midonet_bgpport.results[item.0].stdout }}"
+    with_indexed_items: groups['edge']
+    when: is_spg_supported|success

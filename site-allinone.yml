@@ -1,0 +1,68 @@
+---
+# This playbook deploys the whole application stack in this site.
+
+# Make sure you have this at /etc/ansible/hosts
+# [local]
+# localhost	ansible_connection=local
+
+# Config file for deployment
+- name: Create instance
+  hosts: localhost
+  connection: local
+  vars:
+    allinone: True
+  vars_files:
+  - vars/{{ deploy }}.yml
+  - vars/defaults.yml
+  - "{{ os_settings | default('vars/os_settings.yml') }}"
+  tasks:
+  - include: tasks/create-single-instance.yml
+  tags: c
+
+- hosts: allinone:!localhost
+  vars_files:
+  - vars/{{ deploy }}.yml
+  - vars/defaults.yml
+  - "{{ os_settings | default('vars/os_settings.yml') }}"
+  sudo: True
+  roles:
+  - role: common
+    tags: c
+  - midorepo
+  - role: zookeeper
+    tags: c
+  - cassandra
+  - role: mysql
+  - rabbitmq
+  - keystone
+  - role: glance
+    tags: c
+  - neutron-server
+  - neutron-dhcp-agent
+  - nova-conductor
+  - nova-consoleauth
+  - nova-api
+  - nova-novncproxy
+  - nova-scheduler
+  - horizon
+  - midorepo
+  - midonet-api
+  - role: midolman
+    agent_template: 'agent-compute-medium'
+    controller_host: "{{ deployment_name }}-allinone"
+    midonet_api_hostname: "{{ hostvars[controller_host]['ansible_' + mgmt_iface + '']['ipv4']['address'] }}"
+    tags: tag
+  - role: nova-compute
+    controller_host: "{{ deployment_name }}-allinone"
+    vncserver_proxy_address: "{{ hostvars[controller_host]['ansible_ssh_host'] }}" # trick for floating ip
+  - role: controller_post
+    controller_host: "{{deployment_name}}-allinone"
+    public_ip: "{{ hostvars[controller_host]['ansible_ssh_host'] }}"
+    tags: c
+  - role: compute_post
+    controller_host: "{{deployment_name}}-allinone"
+    midonet_api_hostname: "{{ hostvars[controller_host]['ansible_' + mgmt_iface + '']['ipv4']['address'] }}"
+    keystone_hostname: "{{ hostvars[controller_host]['ansible_' + mgmt_iface + '']['ipv4']['address'] }}"
+    tags: c
+  - role: fake_uplink
+    tags: c

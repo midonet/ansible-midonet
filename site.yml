@@ -1,0 +1,123 @@
+---
+# This playbook deploys the whole application stack in this site.
+
+# Make sure you have this at /etc/ansible/hosts
+# [local]
+# localhost	ansible_connection=local
+
+# Config file for deployment
+- name: Create instances
+  hosts: localhost
+  connection: local
+  vars_files:
+  - vars/{{ deploy }}.yml
+  - vars/defaults.yml
+  - "{{ os_settings | default('vars/os_settings.yml') }}"
+  tasks:
+  - include: tasks/create-instances.yml
+  tags:
+    - midolman
+    - edge
+    - ct
+
+
+# Apply common configuration to all hosts
+- hosts: all:!localhost
+  vars_files:
+  - vars/{{ deploy }}.yml
+  - vars/defaults.yml
+  - "{{ os_settings | default('vars/os_settings.yml') }}"
+  roles:
+  - common
+  sudo: True
+  tags:
+    - zk
+    - midolman
+    - ct
+    - cp
+    - cass
+    - edge
+
+# Zookeeper nodes
+- hosts: nsdb
+  sudo: True
+  vars_files:
+  - vars/{{ deploy }}.yml
+  - vars/defaults.yml
+  - "{{ os_settings | default('vars/os_settings.yml') }}"
+  roles:
+  - role: midorepo
+  - role: zookeeper
+  - role: cassandra
+
+- hosts: controller
+  vars_files:
+  - vars/{{ deploy }}.yml
+  - vars/defaults.yml
+  - "{{ os_settings | default('vars/os_settings.yml') }}"
+  sudo: True
+  roles:
+  - mysql
+  - rabbitmq
+  - keystone
+  - glance
+  - neutron-server
+  - neutron-dhcp-agent
+  - nova-conductor
+  - nova-consoleauth
+  - nova-api
+  - nova-novncproxy
+  - nova-scheduler
+  - horizon
+  - midorepo
+  - role: midonet-api
+  - role: controller_post
+    controller_host: "{{deployment_name}}-controller"
+    public_ip: "{{ hostvars[controller_host]['ansible_ssh_host'] }}"
+  - role: midolman
+    agent_template: 'agent-compute-medium'
+#  - role: midonet-manager
+#    controller_host: "{{deployment_name}}-controller"
+#    login_hostname: "{{ hostvars[controller_host]['ansible_ssh_host'] }}"
+#    midonet_api_hostname: "{{ hostvars[controller_host]['ansible_ssh_host'] }}"
+#    when: midonet_version | version_compare('2014.0', '<')
+    tags: ct
+
+
+# Midolman hosts (compute and edge)
+- hosts: compute
+  roles:
+  - role: nova-compute
+    controller_host: "{{deployment_name}}-controller"
+    rabbit_hostname: "{{ hostvars[controller_host]['ansible_' + mgmt_iface]['ipv4']['address'] }}"
+    keystone_hostname: "{{ hostvars[controller_host]['ansible_' + mgmt_iface]['ipv4']['address'] }}"
+    neutron_hostname: "{{ hostvars[controller_host]['ansible_' + mgmt_iface]['ipv4']['address'] }}"
+    glance_hostname: "{{ hostvars[controller_host]['ansible_' + mgmt_iface]['ipv4']['address'] }}"
+    vncserver_proxy_address: "{{ hostvars[controller_host]['ansible_ssh_host'] }}"
+  - role: compute_post
+    controller_host: "{{deployment_name}}-controller"
+    midonet_api_hostname: "{{ hostvars[controller_host]['ansible_' + mgmt_iface]['ipv4']['address'] }}"
+    keystone_hostname: "{{ hostvars[controller_host]['ansible_' + mgmt_iface]['ipv4']['address'] }}"
+  - midorepo
+  - role: midolman
+    agent_template: 'agent-compute-medium'
+
+  vars_files:
+  - vars/{{ deploy }}.yml
+  - vars/defaults.yml
+  - "{{ os_settings | default('vars/os_settings.yml') }}"
+  tags: cp
+
+  sudo: True
+
+# Edge nodes
+- hosts: edge
+  roles:
+  - midorepo
+  - role: midolman
+    agent_template: 'agent-gateway-medium'
+  vars_files:
+  - vars/{{ deploy }}.yml
+  - vars/defaults.yml
+  - "{{ os_settings | default('vars/os_settings.yml') }}"
+  sudo: True

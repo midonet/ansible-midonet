@@ -1,0 +1,116 @@
+---
+
+
+- include: facts.yml
+
+- name: Update qemu config
+  copy: src=qemu.conf dest=/etc/libvirt/qemu.conf backup=yes
+  notify:
+    - Restart libvirt
+
+- meta: flush_handlers
+
+- name: Enable messagebus service
+  service: name=messagebus state=started enabled=true
+  when: ansible_distribution == 'CentOS' and ansible_distribution_version.split(".")[0] == '6'
+
+- name: Upgrade iproute
+  yum: name=iproute state=latest
+  when: ansible_distribution == 'CentOS' and ansible_distribution_version.split(".")[0] == '6'
+
+- name: Change nova dir permissions
+  file: path=/var/lib/nova state=directory owner='nova' group='nova' recurse=yes
+
+- name: Update nova config
+  ini_file: dest=/etc/nova/nova.conf section=DEFAULT option={{ item.option }} value={{ item.value }} backup=yes
+  with_items:
+    - { option: 'midonet_use_tunctl', value: 'True' }
+    - { option: 'security_group_api', value: 'neutron' }
+    - { option: 'firewall_driver', value: 'nova.virt.firewall.NoopFirewallDriver' }
+    - { option: 'libvirt_vif_driver', value: 'nova.virt.libvirt.vif.LibvirtGenericVIFDriver' }
+  notify:
+    - Restart libvirt
+    - Restart nova compute
+
+- name: Update nova config
+  ini_file: dest=/etc/nova/nova.conf section=MIDONET option={{ item.option }} value={{ item.value }} backup=yes
+  with_items:
+    - { option: 'midonet_uri', value: "http://{{ midonet_api_hostname }}:8080/midonet-api" }
+    - { option: 'username', value: 'admin' }
+    - { option: 'password', value: "{{ admin_pass }}" }
+    - { option: 'project_id', value: 'admin' }
+  notify:
+    - Restart nova compute
+
+- name: Update libvirt config
+  lineinfile:
+    dest: "{{ libvirt_conf }}"
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  with_items:
+      - { regexp: '#listen_tls = 0', line: 'listen_tls = 0' }
+      - { regexp: '#listen_tcp = 1', line: 'listen_tcp = 1' }
+      - { regexp: '#auth_tcp = "sasl"', line: 'auth_tcp = "none"' }
+
+- name: Update libvirt init config
+  lineinfile:
+    dest: "{{ libvirt_init }}"
+    regexp: "libvirtd_opts=\"-d\""
+    line: "libvirtd_opts=\"-d -l\""
+  when: ansible_os_family == 'Debian'
+  notify:
+    - Restart libvirt
+
+- name: Update libvirt init config
+  lineinfile:
+    dest: "{{ libvirt_init }}"
+    regexp: "#LIBVIRTD_ARGS=\"--listen\""
+    line: "LIBVIRTD_ARGS=\"--listen\""
+  when: ansible_os_family == 'RedHat'
+  notify:
+    - Restart libvirt
+
+- name: Create compute hosts template
+  template: src=compute.hosts.j2 dest=/root/compute.hosts
+
+- name: Update /etc/hosts with compute hosts template
+  shell: cat /root/compute.hosts >> /etc/hosts
+
+- name: Update nova-compute config to use QEMU/KVM driver
+  ini_file: dest={{ nova_compute_conf }} section=libvirt option=virt_type value={{ os_virt_type }} backup=yes
+  notify:
+    - Restart nova compute
+
+- name: Update nova notification driver
+  lineinfile: dest=/etc/nova/nova.conf insertbefore="^notification_driver = $" line={{ item }}
+  with_items:
+    - >
+      "notification_driver = ceilometer.compute.nova_notifier"
+    - >
+      "notification_driver = nova.openstack.common.notifier.rpc_notifier"
+  notify:
+    - Restart nova compute
+
+- name: Add rootwrap filter for mm-ctl
+  lineinfile: 'dest=/etc/nova/rootwrap.d/compute.filters insertafter="EOF" line="mm-ctl: CommandFilter, mm-ctl, root"'
+  when: ansible_os_family == "Debian"
+  notify:
+    - Restart nova compute
+
+- name: Add rootwrap filter for mm-ctl
+  lineinfile: 'dest=/usr/share/nova/rootwrap/compute.filters insertafter="EOF" line="mm-ctl: CommandFilter, mm-ctl, root"'
+  when: ansible_os_family == "RedHat"
+  notify:
+    - Restart nova compute
+
+- name: Set loglevel to debug in nova.conf (if loglevel==debug)
+  ini_file:
+    dest: '/etc/nova/nova.conf'
+    section: 'DEFAULT'
+    option: 'debug'
+    value: 'True'
+  when: loglevel == 'debug'
+  notify:
+    - Restart nova services
+
+- meta: flush_handlers

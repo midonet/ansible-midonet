@@ -1,0 +1,20 @@
+---
+- name: Install RabbitMQ packages
+  yum: name=rabbitmq-server state=present
+
+- name: Ensure RabbitMQ service is running
+  service: name=rabbitmq-server state=started
+
+  # Hideous bug on RHEL7 needs this prior to restart, see https://bugzilla.redhat.com/show_bug.cgi?id=1104193
+- name: Check status
+  shell: rabbitmqctl -q status
+  ignore_errors: yes
+
+- name: Copy guest config
+  copy: src=rabbitmq.config dest=/etc/rabbitmq/rabbitmq.config 
+
+- name: Restart RabbitMQ
+  service: name=rabbitmq-server state=restarted
+
+- name: Set rabbitmq password
+  shell: "rabbitmqctl change_password guest {{ admin_password }}"

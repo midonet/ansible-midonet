@@ -1,0 +1,4 @@
+auto {{ item }}
+iface {{ item }} inet dhcp
+post-up ip link set dev {{ item }} mtu 1500
+

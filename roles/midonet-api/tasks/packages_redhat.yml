@@ -1,0 +1,13 @@
+---
+
+
+- name: Install tomcat
+  yum: name={{ tomcat_name }} state=present
+
+- name: Install Midonet API
+  yum: name=midonet-api
+  when: mm_version is not defined or mm_version == "default"
+
+- name: Install Midonet API
+  yum: name=midonet-api-{{mm_version}}
+  when: mm_version is defined and mm_version != "default"

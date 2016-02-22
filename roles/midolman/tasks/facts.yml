@@ -1,0 +1,5 @@
+- name: Set facts
+  set_fact:
+    zk_hosts: "{% for host in groups.nsdb %}{{ hostvars[host]['ansible_default_ipv4']['address'] }}:2181{% if not loop.last %},{% endif %}{% endfor %}"
+    cs_hosts: "{% for host in groups.nsdb %}{{ hostvars[host]['ansible_default_ipv4']['address'] }}{% if not loop.last %},{% endif %}{% endfor %}"
+    replication_factor: "{% if groups.nsdb|length < 3 %}1{% else %}3{% endif %}"

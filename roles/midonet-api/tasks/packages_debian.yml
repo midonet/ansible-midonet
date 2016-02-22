@@ -1,0 +1,19 @@
+---
+
+
+- name: Install openjdk 7
+  apt: name=openjdk-7-jre-headless state=present
+
+- name: Remove openjdk 6
+  apt: name=openjdk-6-jre-headless state=absent
+
+- name: Install tomcat
+  apt: name={{ tomcat_name }} state=present
+
+- name: Install Midonet API
+  apt: name=midonet-api state=present install_recommends=no update_cache=yes
+  when: mm_version is not defined or mm_version == "default"
+
+- name: Install Midonet API
+  apt: name=midonet-api={{mm_version}} state=present install_recommends=no update_cache=yes
+  when: mm_version is defined and mm_version != "default"

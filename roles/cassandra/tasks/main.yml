@@ -1,0 +1,32 @@
+---
+
+- include: redhat.yml
+  when: ansible_os_family == 'RedHat'
+
+- include: debian.yml
+  when: ansible_os_family == 'Debian'
+
+- name: Set configuration path
+  set_fact:
+    cass_etc_conf_dir: '/etc/cassandra/conf'
+  when: ansible_os_family == 'RedHat'
+
+- name: Set configuration path
+  set_fact:
+    cass_etc_conf_dir: '/etc/cassandra/'
+  when: ansible_os_family == 'Debian'
+
+- name: Limit MAX_HEAP_SIZE for allinone
+  replace: dest={{ cass_etc_conf_dir }}/cassandra-env.sh regexp='^#?MAX_HEAP_SIZE=.*' replace='MAX_HEAP_SIZE=128M'
+  when: (allinone is defined) and (allinone == true)
+
+- name: Limit HEAP_NEWSIZE for allinone
+  replace: dest={{ cass_etc_conf_dir }}/cassandra-env.sh regexp='^#?HEAP_NEWSIZE=.*' replace='HEAP_NEWSIZE=64M'
+  when: (allinone is defined) and (allinone == true)
+
+- name: Configure cassandra
+  template: src=cassandra.yaml dest={{ cass_etc_conf_dir }}/cassandra.yaml
+  notify:
+    - Restart cassandra
+
+- meta: flush_handlers

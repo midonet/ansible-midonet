@@ -1,0 +1,23 @@
+---
+deployment_name  : ubuntu14-196-liberty
+num_nsdb_nodes   : 3
+num_comp_nodes   : 3
+num_edge_nodes   : "{{ os_edges_net_id | length }}"
+admin_password   : somepassword
+apt_user         : apt_user
+apt_password     : apt_pass
+midonet_version  : '1.9.6'
+openstack_version: liberty
+ubuntu_version   : trusty
+os_virt_type     : qemu
+tzone_type       : vxlan
+public_subnet_cidr: 200.200.19.0/24
+ssh_user         : ubuntu
+midonet_repo     : mem-1.9
+midonet_dist     : stable
+midonet_os_dist  : stable
+midonet_os_repo  : "openstack-{{openstack_version}}"
+# Set if deploying on OpenStack
+os_image_id      : 1ebcca58-e8c8-4dff-afa3-72aab08a87ca
+
+

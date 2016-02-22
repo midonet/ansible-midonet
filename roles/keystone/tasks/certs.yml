@@ -1,0 +1,10 @@
+---
+
+- name: Generate PKI keys
+  shell: keystone-manage pki_setup --keystone-user keystone --keystone-group keystone
+  when: ansible_os_family == 'RedHat'
+
+- name: Fix keystone log owner
+  file: path=/var/log/keystone/keystone.log owner=keystone group=keystone
+  when: ansible_os_family == 'RedHat'
+

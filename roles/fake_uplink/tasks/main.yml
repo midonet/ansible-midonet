@@ -1,0 +1,4 @@
+---
+
+- name: Set up fake uplink
+  script: setup_fake_uplink.sh

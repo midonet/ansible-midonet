@@ -1,0 +1,29 @@
+---
+
+- name: Configure horizon
+  lineinfile: dest={{ dashboard_settings }}
+              regexp=^OPENSTACK_HOST
+              line="OPENSTACK_HOST = '{{ keystone_hostname }}'"
+  notify:
+    - Restart apache2
+
+- name: Allow all hosts
+  lineinfile: dest={{ dashboard_settings }}
+              regexp=^ALLOWED_HOSTS
+              line="ALLOWED_HOSTS = ['*']"
+  when: ansible_os_family == 'RedHat'
+  notify:
+    - Restart apache2
+
+- name: Set horizon key (RHEL6)
+  lineinfile: dest={{ dashboard_settings }}
+              regexp=^SECRET_KEY
+              line="SECRET_KEY = '{{ admin_password }}'"
+  when: ansible_os_family == 'RedHat' and ansible_distribution_version.split(".")[0] == '6'
+  notify:
+    - Restart apache2
+
+- name: Extend horizon session timeout
+  lineinfile: dest={{ dashboard_settings }} line="SESSION_TIMEOUT=604800"
+  notify:
+    - Restart apache2

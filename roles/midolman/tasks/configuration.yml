@@ -1,0 +1,28 @@
+---
+
+- name: Basic midolman.conf
+  template: src=midolman.conf.j2 dest=/etc/midolman/midolman.conf owner=root group=root
+
+- name: mn-conf default template
+  template: src=default.template.j2 dest=/etc/midolman/default.template owner=root group=root
+
+- name: Apply default mn-conf template (for all nodes)
+  shell: cat /etc/midolman/default.template | mn-conf set -t default
+  retries: 5
+  delay: 10
+
+- name: Apply host template (this node only)
+  shell: mn-conf template-set -h local -t "{{ agent_template }}"
+  retries: 5
+  delay: 10
+
+- name: Ensure midolman is restarted
+  service: name=midolman state=restarted
+
+- name: Create midonetrc
+  ini_file: dest=/root/.midonetrc section=cli option={{ item.option }} value={{ item.value }}
+  with_items:
+    - { option: 'api_url', value: "http://{{ midonet_api_hostname }}:8080/midonet-api" }
+    - { option: 'username', value: 'admin' }
+    - { option: 'password', value: "{{ admin_pass }}" }
+    - { option: 'project_id', value: 'admin' }
