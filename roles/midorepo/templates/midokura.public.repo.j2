@@ -1,0 +1,20 @@
+[midonet]
+name=MidoNet
+baseurl=http://builds.midonet.org/midonet-5/testing/el7/
+enabled=1
+gpgcheck=0
+gpgkey=http://builds.midonet.org/midorepo.key
+
+[midonet-openstack-integration]
+name=MidoNet OpenStack Integration
+baseurl=http://builds.midonet.org/openstack-{{ openstack_version }}/stable/el7/
+enabled=1
+gpgcheck=0
+gpgkey=http://builds.midonet.org/midorepo.key
+
+[midonet-misc]
+name=MidoNet 3rd Party Tools and Libraries
+baseurl=http://builds.midonet.org/misc/stable/el7/
+enabled=1
+gpgcheck=0
+gpgkey=http://builds.midonet.org/midorepo.key

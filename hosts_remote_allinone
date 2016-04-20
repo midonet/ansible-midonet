@@ -1,0 +1,11 @@
+[local]
+localhost ansible_connection=local
+[my_hosts]
+[allinone]
+192.168.40.70
+[controller]
+192.168.40.70
+[nsdb]
+192.168.40.70 myid=1
+[compute]
+192.168.40.70

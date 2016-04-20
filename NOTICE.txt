@@ -1,0 +1,31 @@
+Midonet Ansible Quickstart
+Copyright (C) 2015  Midokura SARL
+
+All source files distributed under GNU General Public License, version 3, except where
+explicitly stated otherwise in the file, or where noted below.
+
+This software includes the following third party software.
+
+openstack-ansible-modules/
+	- Under the GNU General Public License, version 3 (See LICENSE.txt)
+	- Downloaded from http://github.com/openstack-ansible/openstack-ansible-modules (81bca9)
+
+roles/glance/,
+roles/horizon/,
+roles/keystone/,
+roles/neutron-dhcp-agent/,
+roles/neutron-server/,
+roles/nova-api/,
+roles/nova-compute/,
+roles/nova-conductor/,
+roles/nova-consoleauth/,
+roles/nova-novncproxy/,
+roles/nova-scheduler/,
+        - Under the Apache Software License, version 2 (See LICENSE.ASL2.txt)
+	- Copyright (c) 2014 Davide Guerri <davide.guerri@gmail.com>
+	- Downloaded from http://github.com/dguerri
+
+roles/controller_post/files/update-endpoints.py
+        - Under the Apache Software License, version 2 (See LICENSE.ASL2.txt)
+        - Copyright 2013, Matt Fischer <matt.fischer@twcable.com>
+        - Downloaded from https://github.com/matthewfischer/openstack-scripts

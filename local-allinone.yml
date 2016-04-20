@@ -1,14 +1,31 @@
+#
+# Midonet Ansible Quickstart
+# Copyright (C) 2015  Midokura SARL
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 ---
 # This playbook deploys the whole application stack in this site.
 
 - hosts: localhost
-  vars:
-    allinone: True
   vars_files:
   - vars/{{ deploy }}.yml
   - vars/defaults.yml
   - "{{ os_settings | default('vars/os_settings.yml') }}"
-  become: True
+  become: yes
+  become_method: sudo
+  become_user: root
   pre_tasks:
   - name: add localhost to cassandra group
     add_host: name="localhost" groups=nsdb
@@ -17,21 +34,18 @@
   - midorepo
   - role: zookeeper
     myid: 1
-  - cassandra
+  #- cassandra
   - mysql
   - rabbitmq
   - keystone
   - glance
   - neutron-server
-  - role: neutron-dhcp-agent
-    when: midonet_metadata is defined and (midonet_metadata|bool == False)
   - nova-conductor
   - nova-consoleauth
   - nova-api
   - nova-novncproxy
   - nova-scheduler
   - horizon
-  - midorepo
   - midonet-cluster
   - role: midolman
     agent_template: 'agent-compute-medium'

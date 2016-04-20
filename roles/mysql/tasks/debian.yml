@@ -1,3 +1,18 @@
+#
+# Copyright 2015 Midokura SARL
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 ---
 - name: Set facts
   set_fact: mysql_service=mysql
@@ -23,7 +38,7 @@
     - Restart mysql
 
 - name: Set MySQL listen address
-  ini_file: dest=/etc/mysql/my.cnf section=mysqld option=bind-address value={{ my_ip }}
+  ini_file: dest=/etc/mysql/my.cnf section=mysqld option=bind-address value={{ mysql_listen_ip }}
   notify:
     - Restart mysql
 
@@ -45,14 +60,3 @@
   when: ubuntu_version != 'precise'
   notify:
     - Restart mysql
-
-- name: Grant privileges to local ip
-  mysql_user:
-    login_user: root
-    login_password: "{{ admin_password }}"
-    name: root
-    password: "{{ admin_password }}"
-    append_privs: true
-    priv: "*.*:ALL,GRANT"
-    host: "{{ my_ip }}"
-    state: present

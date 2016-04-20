@@ -1,3 +1,19 @@
+#
+# Copyright 2015 Midokura SARL
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 ---
 
 
@@ -21,30 +37,10 @@
 
 - name: Set midonet plugin
   set_fact:
-    midonet_plugin: "midonet.neutron.plugin_v2.MidonetPluginV2"
+    midonet_plugin: midonet.neutron.plugin.MidonetPluginV2
+  when: openstack_version != 'kilo' and openstack_version != 'liberty'
 
-- name: Set neutron service plugin
+- name: Set midonet plugin
   set_fact:
-    service_plugin: |
-      "midonet.neutron.services.l3.l3_midonet.MidonetL3ServicePlugin,neutron_lbaas.services.loadbalancer.plugin.LoadBalancerPlugin"
-  when: openstack_version != 'kilo'
-
-- name: Set neutron service plugin
-  set_fact:
-    service_plugin: "lbaas"
-  when: openstack_version == 'kilo'
-
-- name: Set neutron service plugin
-  set_fact:
-    service_plugin: |
-      "midonet.neutron.services.l3.l3_midonet.MidonetL3ServicePlugin,neutron_lbaas.services.loadbalancer.plugin.LoadBalancerPlugin"
-  when: openstack_version != 'kilo'
-
-- name: Set neutron service plugin
-  set_fact:
-    service_plugin: "lbaas"
-  when: openstack_version == 'kilo'
-
-- name: Set midonet ML2 plugin
-  set_fact:
-    midonet_ml2_plugin: neutron.plugins.ml2.plugin.Ml2Plugin
+    midonet_plugin: midonet.neutron.plugin_v2.MidonetPluginV2
+  when: openstack_version == 'kilo' or openstack_version == 'liberty'
