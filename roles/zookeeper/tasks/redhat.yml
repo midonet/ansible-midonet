@@ -22,7 +22,7 @@
     - zookeeper
     - nmap-ncat
     - zkdump
-  when: ansible_distribution_version.split(".")[0] == '7'
+  when: ansible_distribution_major_version == '7'
 
 - name: Install Zookeeper (RedHat6)
   yum: name={{ item }} state=present
@@ -31,7 +31,7 @@
     - zookeeper
     - nc
     - zkdump
-  when: ansible_distribution_version.split(".")[0] == '6'
+  when: ansible_distribution_major_version == '6'
 
   # ugly java fix, bad zk rpm package
 - file: path=/usr/java state=directory

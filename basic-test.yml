@@ -28,7 +28,7 @@
   - include: tasks/get-controller-edges.yml
 
   - name: Add exterior host to contact the VM
-    add_host: name=119.15.120.229 groups=external ansible_ssh_user=ubuntu
+    add_host: name="{{ external_host }}" groups=external ansible_ssh_user=ubuntu
 
 
 - name: Gather facts

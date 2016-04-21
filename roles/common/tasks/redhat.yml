@@ -26,11 +26,11 @@
 
 - name: Add EPEL7 repository
   yum: name=http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm state=present
-  when: (openstack_version == 'juno' or openstack_version == 'kilo' or openstack_version == 'liberty') and ansible_distribution_version.split(".")[0] == '7'
+  when: (openstack_version == 'juno' or openstack_version == 'kilo' or openstack_version == 'liberty') and ansible_distribution_major_version == '7'
 
 - name: Add EPEL6 repository
   yum: name=http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm state=present
-  when: ansible_distribution == 'CentOS' and ansible_distribution_version.split(".")[0] == '6'
+  when: ansible_distribution == 'CentOS' and ansible_distribution_major_version == '6'
 
 - name: Enable openstack repo 
   yum: name=centos-release-openstack-liberty state=present

@@ -155,8 +155,14 @@
     - Restart neutron server
 
 - name: Upgrade neutron db with midonet tables
+  shell: neutron-db-manage --subproject networking-midonet upgrade head
+  when: openstack_version != 'kilo'
+  become: True
+  become_user: "neutron"
+
+- name: Upgrade neutron db with midonet tables
   shell: midonet-db-manage upgrade head
-  when: openstack_version == 'kilo' or openstack_version == 'liberty'
+  when: openstack_version == 'kilo'
 
 - name: Allow Neutron to select the correct plugin
   template: src=neutron-server.j2 dest=/etc/default/neutron-server

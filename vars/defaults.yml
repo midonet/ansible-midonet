@@ -16,7 +16,7 @@
 ---
 
 mgmt_iface        : eth0
-mgmt_ip           : "{{ ansible_eth0['ipv4']['address'] }}"
+mgmt_ip           : "{{ ansible_default_ipv4['address'] }}"
 mysql_rootpass: "{{ admin_password }}"
 keystone_dbpass: "{{ admin_password }}"
 admin_token: 'somelongtesttoken'
@@ -29,6 +29,7 @@ glance_pass: "{{ admin_password }}"
 glance_dbpass: "{{ admin_password }}"
 glance_hostname: "{{ mgmt_ip }}"
 nova_conductor_dbpass: "{{ admin_password }}"
+external_host: localhost
 console_public_hostname: "{{ mgmt_ip }}"
 metadata_secret: "somesecret"
 neutron_pass: "{{ admin_password }}"

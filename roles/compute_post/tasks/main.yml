@@ -30,11 +30,11 @@
 
 - name: Enable messagebus service
   service: name=messagebus state=started enabled=true
-  when: ansible_distribution == 'CentOS' and ansible_distribution_version.split(".")[0] == '6'
+  when: ansible_distribution == 'CentOS' and ansible_distribution_major_version == '6'
 
 - name: Upgrade iproute
   yum: name=iproute state=latest
-  when: ansible_distribution == 'CentOS' and ansible_distribution_version.split(".")[0] == '6'
+  when: ansible_distribution == 'CentOS' and ansible_distribution_major_version == '6'
 
 - name: Update nova config
   ini_file: dest=/etc/nova/nova.conf section=DEFAULT option={{ item.option }} value={{ item.value }} backup=yes
