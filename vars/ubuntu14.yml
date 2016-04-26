@@ -19,7 +19,7 @@ num_nsdb_nodes   : 1
 num_comp_nodes   : 1
 num_edge_nodes   : "{{ os_edges_net_id | length }}"
 admin_password   : midonet
-midonet_version  : 2:5.0.2~rc1
+midonet_version  : 2:5.0.2
 openstack_version: liberty 
 midonet_release  : testing
 plugin_release   : stable

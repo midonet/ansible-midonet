@@ -15,10 +15,6 @@
 #
 ---
 
-- name: Add Ubuntu Trusty APT repo
-  template: src=ubuntu.list dest=/etc/apt/sources.list
-  when: openstack_version == 'liberty'
-
 - name: Add openstack APT repo
   shell: "add-apt-repository -y cloud-archive:{{openstack_version}}"
   when: openstack_version != 'kilo'

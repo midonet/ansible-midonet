@@ -20,7 +20,7 @@
     - mariadb-server
     - mariadb
     - MySQL-python
-  when: ansible_distribution_version.split(".")[0] == '7'
+  when: ansible_distribution_major_version == '7'
 
 - name: Install MySQL packages
   yum: name={{ item }} state=present
@@ -28,15 +28,15 @@
     - mysql-server
     - mysql
     - MySQL-python
-  when: ansible_distribution_version.split(".")[0] == '6'
+  when: ansible_distribution_major_version == '6'
 
 - name: Set facts
   set_fact: mysql_service=mariadb
-  when: ansible_distribution_version.split(".")[0] == '7'
+  when: ansible_distribution_major_version == '7'
 
 - name: Set facts
   set_fact: mysql_service=mysqld
-  when: ansible_distribution_version.split(".")[0] == '6'
+  when: ansible_distribution_major_version == '6'
 
 - name: Ensure MariaDB service is started and enabled
   service:
@@ -52,13 +52,13 @@
   copy: src=openstack.cnf dest=/etc/my.cnf.d/openstack.cnf
   notify:
     - Restart mysql
-  when: ansible_distribution_version.split(".")[0] == '7'
+  when: ansible_distribution_major_version == '7'
 
 - name: Add mysql config
   copy: src=my.cnf dest=/etc/my.cnf
   notify:
     - Restart mysql
-  when: ansible_distribution_version.split(".")[0] == '6'
+  when: ansible_distribution_major_version == '6'
 
 - name: Set MySQL max connections
   ini_file: dest=/etc/my.cnf section=mysqld option=max_connections value='1024'
