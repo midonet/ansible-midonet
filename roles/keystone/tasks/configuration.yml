@@ -31,7 +31,7 @@
       value:    /var/log/keystone
     - section:  database
       option:   connection
-      value:    "mysql://keystone:{{ keystone_dbpass }}@{{ my_ip }}/keystone"
+      value:    "mysql://keystone:{{ keystone_dbpass }}@{{ mysql_hostname }}/keystone"
     - section:  token
       option:   expiration
       value:    86400

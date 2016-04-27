@@ -25,7 +25,7 @@
   with_items:
     - section:  database
       option:   connection
-      value:    "mysql://glance:{{ glance_dbpass }}@{{ my_ip }}/glance"
+      value:    "mysql://glance:{{ glance_dbpass }}@{{ mysql_hostname }}/glance"
     - section:  DEFAULT
       option:   rpc_backend
       value:    rabbit
@@ -38,6 +38,9 @@
     - section:  DEFAULT
       option:   rabbit_password
       value:    "{{ rabbit_pass }}"
+    - section:  glance_store
+      option:   filesystem_store_datadir
+      value:    /var/lib/glance/images
     - section:  keystone_authtoken
       option:   auth_uri
       value:    "{{ keystone_protocol }}://{{ keystone_hostname }}:{{ keystone_port }}/v2.0"
@@ -62,15 +65,6 @@
     - section:  paste_deploy
       option:   flavor
       value:    keystone
-    - section:  glance_store
-      option:   stores
-      value:    glance.store.filesystem.Store,glance.store.http.Store
-    - section:  glance_store
-      option:   filesystem_store_datadir
-      value:    /var/lib/glance/images/
-    - section:  glance_store
-      option:   default_store
-      value:    file
   notify:
     - Restart glance API
 

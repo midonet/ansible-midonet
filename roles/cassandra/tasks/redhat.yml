@@ -1,3 +1,18 @@
+#
+# Copyright 2015 Midokura SARL
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 ---
 
 - name: Add datastax repo
@@ -13,19 +28,20 @@
 
 - name: Install cassandra
   yum: name=cassandra20-2.0.10 state=present
-
-- name: Force systemd daemon reload
-  command: systemctl daemon-reload
+  notify:
+    - Stop cassandra
 
 - meta: flush_handlers
 
-- name: List cassandra data
-  shell: ls -1 /var/lib/cassandra/
-  register: cassandra_files
-
-- name: Clear cassandra data
-  file: path=/var/lib/cassandra/{{ item }} state=absent
-  with_items: cassandra_files.stdout_lines
+- name: clear data
+  shell: rm -rf /var/lib/cassandra
 
 - name: Creates directory
   file: path=/var/lib/cassandra state=directory owner=cassandra group=cassandra mode=0775
+
+- name: Configure cassandra
+  template: src=cassandra.yaml dest=/etc/cassandra/conf/cassandra.yaml
+  notify:
+    - Restart cassandra
+
+- meta: flush_handlers

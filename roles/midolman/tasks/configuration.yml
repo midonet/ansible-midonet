@@ -1,20 +1,49 @@
+#
+# Copyright 2015 Midokura SARL
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 ---
 
 - name: Basic midolman.conf
   template: src=midolman.conf.j2 dest=/etc/midolman/midolman.conf owner=root group=root
+
+- name: mn-conf default template
+  template: src=default.template.j2 dest=/etc/midolman/default.template owner=root group=root
+
+- name: Apply default mn-conf template (for all nodes)
+  shell: cat /etc/midolman/default.template | mn-conf set -t default
+  retries: 5
+  delay: 10
 
 - name: Apply host template (this node only)
   shell: mn-conf template-set -h local -t "{{ agent_template }}"
   retries: 5
   delay: 10
 
-- name: Ensure midolman is restarted
-  service: name=midolman state=restarted
-
 - name: Create midonetrc
-  ini_file: dest=/root/.midonetrc section=cli option={{ item.option }} value={{ item.value }}
+  ini_file: dest=~/.midonetrc section=cli option={{ item.option }} value={{ item.value }}
   with_items:
     - { option: 'api_url', value: "http://{{ midonet_api_hostname }}:8181/midonet-api" }
     - { option: 'username', value: 'admin' }
     - { option: 'password', value: "{{ admin_pass }}" }
     - { option: 'project_id', value: 'admin' }
+
+- name: Set JVM max heap size
+  replace:
+    dest: '/etc/midolman/midolman-env.sh'
+    regexp: 'MAX_HEAP_SIZE="2048M"'
+    replace: 'MAX_HEAP_SIZE="512M"'
+
+- name: Ensure midolman is restarted
+  service: name=midolman state=restarted

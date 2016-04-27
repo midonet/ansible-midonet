@@ -29,5 +29,5 @@ keystone_protocol: http
 
 # MySQL
 mysql_admin_username: root
-mysql_hostname: "{{ my_ip }}"
+mysql_hostname: localhost
 mysql_rootpass: mysql_root_default

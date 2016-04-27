@@ -1,3 +1,18 @@
+#
+# Copyright 2015 Midokura SARL
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 ---
 
 mgmt_iface        : eth0
@@ -16,29 +31,21 @@ glance_hostname: "{{ mgmt_ip }}"
 nova_conductor_dbpass: "{{ admin_password }}"
 console_public_hostname: "{{ mgmt_ip }}"
 metadata_secret: "somesecret"
+neutron_pass: "{{ admin_password }}"
 nova_api_hostname: "{{ mgmt_ip }}"
 nova_pass: "{{ admin_password }}"
 neutron_dbpass: "{{ admin_password }}"
 neutron_server_hostname: "{{ mgmt_ip }}"
 neutron_pass: "{{ admin_password }}"
 my_ip: "{{ mgmt_ip }}"
-mysql_listen_ip: 0.0.0.0
+mysql_listen_ip: 127.0.0.1 
 mm_version: default
 plugin_version: default
 plugin_dist: stable
-enable_ml2_plugin: false
-midonet_metadata : true
-tzone_type       : vxlan
-external_host    : localhost
+external_host: localhost
 
 # Loglevel setting for services to deploy, e.g midonet-cluster,
 # neutron-server, etc.
 # By default, it does not touch anything.
 # If set to "debug", change loglevel settings to debug mode.
 loglevel: default
-
-# package repo related settings
-repo_url_base: http://builds.midonet.org/
-pkg_pubkey_url: "{{ repo_url_base }}midorepo.key"
-
-midonet_misc_repo: misc

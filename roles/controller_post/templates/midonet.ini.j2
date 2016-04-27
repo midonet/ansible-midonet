@@ -1,5 +1,5 @@
 [DATABASE]
-sql_connection = mysql+mysqlconnector://neutron:{{ admin_pass }}@{{ mgmt_ip }}/neutron
+sql_connection = mysql+mysqlconnector://neutron:{{ admin_pass }}@{{ mysql_listen_ip }}/neutron
 sql_max_retries = 100
 
 [MIDONET]

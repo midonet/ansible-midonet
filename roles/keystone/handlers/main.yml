@@ -19,7 +19,7 @@
 
 - name: Sync keystone db
   shell: keystone-manage db_sync
-  become: True
+  become: yes
   become_user: keystone
   notify:
     - Restart keystone
