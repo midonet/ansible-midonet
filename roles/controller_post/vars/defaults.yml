@@ -17,7 +17,7 @@
 
 #Mysql
 mysql_admin_username: root
-mysql_hostname: localhost
+mysql_hostname: "{{ my_ip }}"
 mysql_rootpass: mysql_root_default
 
 # Keystone

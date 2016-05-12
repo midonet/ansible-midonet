@@ -66,6 +66,6 @@
     - Restart mysql
 
 - name: Set MySQL listen address
-  ini_file: dest=/etc/my.cnf section=mysqld option=bind-address value={{ mysql_listen_ip }}
+  ini_file: dest=/etc/my.cnf section=mysqld option=bind-address value={{ my_ip }}
   notify:
     - Restart mysql
