@@ -60,3 +60,14 @@
   when: ubuntu_version != 'precise'
   notify:
     - Restart mysql
+
+- name: Grant privileges to local ip
+  mysql_user:
+    login_user: root
+    login_password: "{{ admin_password }}"
+    name: root
+    password: "{{ admin_password }}"
+    append_privs: true
+    priv: "*.*:ALL,GRANT"
+    host: "{{ my_ip }}"
+    state: present
