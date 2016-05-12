@@ -25,7 +25,7 @@
   with_items:
     - section:  database
       option:   connection
-      value:    "mysql://glance:{{ glance_dbpass }}@{{ mysql_hostname }}/glance"
+      value:    "mysql://glance:{{ glance_dbpass }}@{{ my_ip }}/glance"
     - section:  DEFAULT
       option:   rpc_backend
       value:    rabbit

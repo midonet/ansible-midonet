@@ -205,7 +205,7 @@
 - name: Update nova config
   ini_file: dest=/etc/nova/nova.conf section=database option={{ item.option }} value={{ item.value }} backup=yes
   with_items:
-    - { option: 'connection', value: "mysql://nova:{{ admin_pass }}@{{ mysql_hostname }}/nova" }
+    - { option: 'connection', value: "mysql://nova:{{ admin_pass }}@{{ mgmt_ip }}/nova" }
 
 - name: Update nova notification driver
   lineinfile: dest=/etc/nova/nova.conf insertbefore="^notification_driver = $" line={{ item }}

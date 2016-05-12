@@ -38,7 +38,7 @@ neutron_dbpass: "{{ admin_password }}"
 neutron_server_hostname: "{{ mgmt_ip }}"
 neutron_pass: "{{ admin_password }}"
 my_ip: "{{ mgmt_ip }}"
-mysql_listen_ip: 127.0.0.1 
+mysql_listen_ip:  0.0.0.0
 mm_version: default
 plugin_version: default
 plugin_dist: stable
