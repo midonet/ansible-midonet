@@ -43,6 +43,7 @@ mm_version: default
 plugin_version: default
 plugin_dist: stable
 external_host: localhost
+midonet_metadata: true
 
 # Loglevel setting for services to deploy, e.g midonet-cluster,
 # neutron-server, etc.
