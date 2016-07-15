@@ -60,6 +60,7 @@
     ram: 64
     vcpus: 1
     disk: 0
+    is_public: 'yes'
 
 - name: Upgrade iproute
   yum: name=iproute state=latest
