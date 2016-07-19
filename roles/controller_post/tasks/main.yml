@@ -60,6 +60,7 @@
     ram: 64
     vcpus: 1
     disk: 0
+    is_public: 'yes'
 
 - name: Upgrade iproute
   yum: name=iproute state=latest
@@ -112,7 +113,6 @@
   yum: name={{ item }} state=present
   with_items:
     - python-networking-midonet
-    - openstack-neutron-midonet
     - openstack-neutron-lbaas
     - mysql-connector-python
   when: ansible_os_family == 'RedHat' and openstack_version == 'liberty' and (plugin_version is not defined or plugin_version == "default")
@@ -121,7 +121,6 @@
   yum: name={{ item }} state=present
   with_items:
     - python-networking-midonet-{{plugin_version}}
-    - openstack-neutron-midonet
     - openstack-neutron-lbaas
     - mysql-connector-python
   when: ansible_os_family == 'RedHat' and openstack_version == 'liberty' and (plugin_version is defined and plugin_version != "default")
