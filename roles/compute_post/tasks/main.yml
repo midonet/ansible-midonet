@@ -96,6 +96,21 @@
   notify:
     - Restart nova compute
 
+- name: Update nova-compute DEFAULT config
+  ini_file: dest=/etc/nova/nova-compute.conf section=DEFAULT option={{ item.option }} value={{ item.value }} backup=yes
+  with_items:
+    - { option: 'compute_driver', value: 'libvirt.LibvirtDriver' }
+    - { option: 'vncserver_listen', value: '{{ vncserver_listen }}' }
+    - { option: 'vncserver_proxyclient_address', value: '{{ vncserver_proxyclient_address }}' }
+    - { option: 'novncproxy_base_url', value: '{{ novncproxy_base_url }}' }
+  notify:
+    - Restart nova compute
+
+- name: Update nova-compute config to use QEMU driver
+  ini_file: dest=/etc/nova/nova-compute.conf section=libvirt option=virt_type value=qemu backup=yes
+  notify:
+    - Restart nova compute
+
 - name: Update nova notification driver
   lineinfile: dest=/etc/nova/nova.conf insertbefore="^notification_driver = $" line={{ item }}
   with_items:

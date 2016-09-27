@@ -31,9 +31,8 @@
 - name: Remove openjdk 6
   apt: name=openjdk-6-jre-headless state=absent
 
-# Supported Cassandra 2.0.10 only
 - name: Install cassandra
-  apt: name=cassandra=2.0.10 state=present update_cache=yes
+  apt: name=cassandra=2.2.7 state=present update_cache=yes
 
 - name: Force stop cassandra
   service: name=cassandra state=stopped
