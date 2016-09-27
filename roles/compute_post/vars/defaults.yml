@@ -15,6 +15,13 @@
 #
 ---
 
+my_ip: "{{ mgmt_ip }}"
+
+vncserver_listen: 0.0.0.0
+vncserver_proxyclient_address: "{{ my_ip }}"
+vncserver_proxy_address: "{{ my_ip }}"
+novncproxy_base_url: "http://{{ vncserver_proxy_address }}:6080/vnc_auto.html"
+
 #Mysql
 mysql_admin_username: root
 mysql_hostname: "{{ my_ip }}"
