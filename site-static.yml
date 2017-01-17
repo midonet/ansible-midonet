@@ -1,0 +1,116 @@
+#
+# Midonet Ansible Quickstart
+# Copyright (C) 2015  Midokura SARL
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+---
+# Apply common configuration to all hosts
+- hosts: all:!localhost
+  vars_files:
+  - vars/{{ deploy }}.yml
+  - vars/defaults.yml
+  - "{{ os_settings | default('vars/os_settings.yml') }}"
+  roles:
+  - common
+  sudo: True
+  tags:
+    - zk
+    - midolman
+    - ct
+    - cp
+    - cass
+    - edge
+
+# Zookeeper nodes
+- hosts: nsdb
+  sudo: True
+  vars_files:
+  - vars/{{ deploy }}.yml
+  - vars/defaults.yml
+  - "{{ os_settings | default('vars/os_settings.yml') }}"
+  roles:
+  - role: midorepo
+  - role: zookeeper
+  - role: cassandra
+
+- hosts: controller
+  vars_files:
+  - vars/{{ deploy }}.yml
+  - vars/defaults.yml
+  - "{{ os_settings | default('vars/os_settings.yml') }}"
+  sudo: True
+  roles:
+  - mysql
+  - rabbitmq
+  - keystone
+  - glance
+  - neutron-server
+  - nova-conductor
+  - nova-consoleauth
+  - nova-api
+  - nova-novncproxy
+  - nova-scheduler
+  - horizon
+  - midorepo
+  - role: midonet-cluster
+  - role: controller_post
+    public_ip: "{{ hostvars[groups.controller[0]]['ansible_hostname'] }}"
+  - role: midolman
+    agent_template: 'agent-compute-medium'
+#  - role: midonet-manager
+#    groups.controller[0]: "{{deployment_name}}-controller"
+#    login_hostname: "{{ hostvars[groups.controller[0]]['ansible_ssh_host'] }}"
+#    midonet_api_hostname: "{{ hostvars[groups.controller[0]]['ansible_ssh_host'] }}"
+#    when: midonet_version | version_compare('2014.0', '<')
+    tags: ct
+
+
+# Midolman hosts (compute and edge)
+- hosts: compute
+  roles:
+  - role: nova-compute
+    rabbit_hostname: "{{ hostvars[groups.controller[0]]['ansible_' + mgmt_iface]['ipv4']['address'] }}"
+    keystone_hostname: "{{ hostvars[groups.controller[0]]['ansible_' + mgmt_iface]['ipv4']['address'] }}"
+    neutron_hostname: "{{ hostvars[groups.controller[0]]['ansible_' + mgmt_iface]['ipv4']['address'] }}"
+    glance_hostname: "{{ hostvars[groups.controller[0]]['ansible_' + mgmt_iface]['ipv4']['address'] }}"
+    vncserver_proxy_address: "{{ hostvars[groups.controller[0]]['ansible_ssh_host'] }}"
+  - role: compute_post
+    midonet_api_hostname: "{{ hostvars[groups.controller[0]]['ansible_' + mgmt_iface]['ipv4']['address'] }}"
+    keystone_hostname: "{{ hostvars[groups.controller[0]]['ansible_' + mgmt_iface]['ipv4']['address'] }}"
+  - midorepo
+  - role: midolman
+    agent_template: 'agent-compute-medium'
+    midonet_api_hostname: "{{ hostvars[groups.controller[0]]['ansible_' + mgmt_iface]['ipv4']['address'] }}"
+
+  vars_files:
+  - vars/{{ deploy }}.yml
+  - vars/defaults.yml
+  - "{{ os_settings | default('vars/os_settings.yml') }}"
+  tags: cp
+
+  sudo: True
+
+# Edge nodes
+- hosts: edge
+  roles:
+  - midorepo
+  - role: midolman
+    agent_template: 'agent-gateway-medium'
+    midonet_api_hostname: "{{ hostvars[groups.controller[0]]['ansible_' + mgmt_iface]['ipv4']['address'] }}"
+  vars_files:
+  - vars/{{ deploy }}.yml
+  - vars/defaults.yml
+  - "{{ os_settings | default('vars/os_settings.yml') }}"
+  sudo: True

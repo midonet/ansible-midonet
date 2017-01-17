@@ -1,3 +1,20 @@
+#
+# Midonet Ansible Quickstart
+# Copyright (C) 2015  Midokura SARL
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 ---
 
 - name: Get edges
@@ -15,7 +32,7 @@
 
 - name: edge
   hosts: edge
-  become: True
+  become: yes
   tasks:
 
   - name: is eth1 up?
@@ -61,7 +78,7 @@
       OS_TENANT_NAME: admin
       OS_PASSWORD:  "{{ admin_password }}"
       OS_AUTH_URL: http://localhost:35357/v2.0/
-  become: True
+  become: yes
   tasks:
 
   # NOTE: 2-edge only
@@ -74,60 +91,32 @@
   - name: Check if edge1 network exists
     shell: neutron net-list | grep edge1
     register: edge1_result
-    ignore_errors: yes
     environment: keystone_env
 
   - name: Create edge1 network
     shell: neutron net-create edge1 --tenant_id admin --provider:network_type uplink | grep " id " | awk '{print $4}'
     register: edge1_id
     environment: keystone_env
-    when: edge1_result|failed
-
-  - name: Grab edge1 network id
-    shell: neutron net-list | grep edge1 | awk '{print $2}'
-    register: edge1_id
-    ignore_errors: yes
-    environment: keystone_env
 
   - name: Check if edge2 network exists
     shell: neutron net-list | grep edge2
     register: edge2_result
-    ignore_errors: yes
     environment: keystone_env
 
   - name: Create edge2 network
     shell: neutron net-create edge2 --tenant_id admin --provider:network_type uplink | grep " id " | awk '{print $4}'
     register: edge2_id
     environment: keystone_env
-    when: edge2_result|failed
-
-  - name: Grab edge2 network id
-    shell: neutron net-list | grep edge2 | awk '{print $2}'
-    register: edge2_id
-    ignore_errors: yes
-    environment: keystone_env
-
-  - name: Check if edge1 subnet exists
-    shell: neutron subnet-list | grep edge1_subnet
-    register: edge1_subnet_result
-    ignore_errors: yes
-    environment: keystone_env
 
   - name: Create edge1 subnet
-    shell: neutron subnet-create  --tenant_id admin --name edge1_subnet --disable-dhcp edge1 "{{ hostvars[groups['edge'][0]]['exterior_net'] }}"
-    environment: keystone_env
-    when: edge1_subnet_result|failed
-
-  - name: Check if edge2 subnet exists
-    shell: neutron subnet-list | grep edge2_subnet
-    register: edge2_subnet_result
-    ignore_errors: yes
-    environment: keystone_env
+    neutron_subnet: name=edge1_subnet state=present cidr=172.21.1.0/24 network_name=edge1 gateway_ip=172.21.1.3
+                    login_username=admin login_password={{ admin_password }} login_tenant_name=admin tenant_name=admin
+    register: edge1_subnet
 
   - name: Create edge2 subnet
-    shell: neutron subnet-create  --tenant_id admin --name edge2_subnet --disable-dhcp edge2 "{{ hostvars[groups['edge'][1]]['exterior_net'] }}"
-    environment: keystone_env
-    when: edge2_subnet_result|failed
+    neutron_subnet: name=edge2_subnet state=present cidr=172.21.2.0/24 network_name=edge2 gateway_ip=172.21.2.3
+                    login_username=admin login_password={{ admin_password }} login_tenant_name=admin tenant_name=admin
+    register: edge2_subnet
 
   - name: Grab edge1 host id
     shell: midonet-cli -e host list | grep -i  "{{ hostvars[groups['edge'][0]]['ansible_hostname'] }}" | cut -d ' ' -f 2
@@ -148,101 +137,45 @@
     environment: keystone_env
 
   - name: Grab public subnet cidr
-    shell: "neutron subnet-list | grep public | awk '{print $6}'"
-    register: public_cidr
+    shell: "neutron subnet-list | grep public | cut -d ' ' -f 6"
+    register: public_subnet_cidr
     environment: keystone_env
 
-  - name: Check if port 1 exists
-    shell: neutron port-list | grep "{{ hostvars[groups['edge'][0]]['exterior_ip'] }}" | awk '{print $2}'
-    register: port1_exists
-    environment: keystone_env
-    ignore_errors: yes
-
+    #TODO: check port exists
   - name: Create port for edge1
     shell: neutron port-create {{ edge1_id.stdout }} --binding:host_id  "{{ hostvars[groups['edge'][0]]['ansible_hostname'] }}" --binding:profile type=dict interface_name=eth1 --fixed-ip ip_address="{{ hostvars[groups['edge'][0]]['exterior_ip'] }}" | grep " id " | awk '{print $4}'
-    when: port1_exists|failed or port1_exists.stdout == ""
-    environment: keystone_env
-
-  - name: Grab port1
-    shell: neutron port-list | grep "{{ hostvars[groups['edge'][0]]['exterior_ip'] }}" | awk '{print $2}'
     register: port1_id
     environment: keystone_env
 
-  - name: Check if port 2 exists
-    shell: neutron port-list | grep "{{ hostvars[groups['edge'][1]]['exterior_ip'] }}" | awk '{print $2}'
-    register: port2_exists
-    environment: keystone_env
-    ignore_errors: yes
-
+    #TODO: check port exists
   - name: Create port for edge2
     shell: neutron port-create {{ edge2_id.stdout }} --binding:host_id  "{{ hostvars[groups['edge'][1]]['ansible_hostname'] }}" --binding:profile type=dict interface_name=eth1 --fixed-ip ip_address="{{ hostvars[groups['edge'][1]]['exterior_ip'] }}" | grep " id " | awk '{print $4}'
-    when: port2_exists|failed or port2_exists.stdout == ""
-    environment: keystone_env
-
-  - name: Grab port2
-    shell: neutron port-list | grep "{{ hostvars[groups['edge'][1]]['exterior_ip'] }}" | awk '{print $2}'
     register: port2_id
     environment: keystone_env
 
-  - name: Check if port 1 is added to edge router
-    shell: neutron router-port-list {{ edge_router.id }} | grep {{ port1_id.stdout }}
-    register: port1_added_exists
-    environment: keystone_env
-    ignore_errors: yes
-
+    #TODO: check exists
   - name: Bind edge router to port1
     shell: neutron router-interface-add {{ edge_router.id }} port={{ port1_id.stdout }}
     environment: keystone_env
-    when: port1_added_exists|failed
 
-  - name: Check if port 2 is added to edge router
-    shell: neutron router-port-list {{ edge_router.id }} | grep {{ port2_id.stdout }}
-    register: port2_added_exists
-    environment: keystone_env
-    ignore_errors: yes
-
+    #TODO: check exists
   - name: Bind edge router to port2
     shell: neutron router-interface-add {{ edge_router.id }} port={{ port2_id.stdout }}
-    when: port2_added_exists|failed
     environment: keystone_env
 
-  - name: Check if public port is added to edge router
-    shell: neutron router-port-list "{{ edge_router.id }}" | grep "{{ public_subnet_id.stdout }}"
-    register: public_port_exists
-    environment: keystone_env
-    ignore_errors: yes
-
+    #TODO: check port exists
   - name: Bind edge router to public network
     shell: neutron router-interface-add {{ edge_router.id }} {{ public_subnet_id.stdout }}
-    when: public_port_exists|failed
     environment: keystone_env
 
-  - name: Set edge bgp local AS
+  - name: add edge bgp local AS
     shell: "midonet-cli -e router {{ edge_router.id }} set asn 87654321"
 
-  - name: Check if peer 1 exists
-    shell: "midonet-cli -e router {{ edge_router.id }} list bgp-peer | grep {{ bgp1_peer_ip }}"
-    register: peer1_exists
-    ignore_errors: yes
+  - name: add edge bgp peer 1
+    shell: "midonet-cli -e router {{ edge_router.id }} add bgp-peer asn 12345678 address 172.21.1.3"
 
-  - name: Add edge bgp peer 1
-    shell: "midonet-cli -e router {{ edge_router.id }} add bgp-peer asn 12345678 address {{ bgp1_peer_ip }}"
-    when: peer1_exists|failed
-
-  - name: Check if peer 2 exists
-    shell: "midonet-cli -e router {{ edge_router.id }} list bgp-peer | grep {{ bgp2_peer_ip }}"
-    register: peer2_exists
-    ignore_errors: yes
-
-  - name: Add edge bgp peer 2
-    shell: "midonet-cli -e router {{ edge_router.id }} add bgp-peer asn 12345678 address {{ bgp2_peer_ip }}"
-    when: peer2_exists|failed
-
-  - name: Check if public network exists
-    shell: "midonet-cli -e router {{ edge_router.id }} list bgp-network | grep {{ public_cidr.stdout }}"
-    register: public_network_exists
-    ignore_errors: yes
+  - name: add edge bgp peer 2
+    shell: "midonet-cli -e router {{ edge_router.id }} add bgp-peer asn 12345678 address 172.21.2.3"
 
   - name: Add bgp public network
-    shell: "midonet-cli -e router {{ edge_router.id }} add bgp-network net {{ public_cidr.stdout }}"
-    when: public_network_exists|failed
+    shell: "midonet-cli -e router {{ edge_router.id }} add bgp-network net {{ public_subnet_cidr.stdout }}"

@@ -19,7 +19,7 @@
 
 - name: Sync glance db
   shell: glance-manage db_sync
-  become: True
+  become: yes
   become_user: glance
   notify:
     - Restart glance API

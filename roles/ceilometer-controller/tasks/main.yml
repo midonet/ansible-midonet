@@ -1,0 +1,123 @@
+#
+# Midonet Ansible Quickstart
+# Copyright (C) 2015  Midokura SARL
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+- include: redhat.yml
+  when: ansible_os_family == 'RedHat'
+
+- include: debian.yml
+  when: ansible_os_family == 'Debian'
+
+- name: setup mongo conf
+  lineinfile: state=present line="{{ item.value }}" regexp={{ item.match }} dest=/etc/mongod.conf
+  with_items:
+    - { match: "^bind_ip", value: "bind_ip = {{ mgmt_ip }}" }
+    - { match: "^smallfiles", value: "smallfiles = true" }
+
+- name: start and enable mongo
+  service: name=mongod enabled=yes state=restarted
+
+# should use mongodb_user, but it straight up doesn't work
+- name: upload mongo user template
+  template: src=create-mongo-user.js.j2 dest=/tmp/create-mongo-user.js
+  
+- name: setup mongo user
+  command: mongo --host {{ mgmt_ip }} /tmp/create-mongo-user.js
+
+- name: create ceilometer user in keystone
+  keystone_user: user=ceilometer
+                 tenant=service
+                 password="{{ admin_password }}"
+                 email=nova@localhost
+                 endpoint="{{ keystone_protocol }}://{{ keystone_hostname }}:{{ keystone_admin_port }}/v2.0"
+                 token="{{ admin_token }}"
+
+- name: add ceilometer user to admin role
+  keystone_user: user=ceilometer
+                 tenant=service
+                 role=admin
+                 endpoint="{{ keystone_protocol }}://{{ keystone_hostname }}:{{ keystone_admin_port }}/v2.0"
+                 token="{{ admin_token }}"
+                 
+- name: create ceilometer service in keystone
+  keystone_service: token="{{ admin_token }}"
+                    name=ceilometer
+                    type=metering
+                    description="Telemetry"
+                    public_url="http://{{ mgmt_ip }}:8777"
+                    internal_url="http://{{ mgmt_ip }}:8777"
+                    admin_url="http://{{ mgmt_ip }}:8777"
+
+- name: setup the ceilometer config file
+  ini_file: dest=/etc/ceilometer/ceilometer.conf
+            section={{ item.section }} option={{ item.option }} value={{ item.value }}
+  with_items:
+    - { section: "database", option: "connection",
+        value: "mongodb://ceilometer:{{ admin_password }}@{{ mgmt_ip }}:27017/ceilometer" }
+    - { section: "DEFAULT", option: "rpc_backend", value: "rabbit" }
+    - { section: "oslo_messaging_rabbit", option: "rabbit_host", value: "{{ mgmt_ip }}" }
+    - { section: "oslo_messaging_rabbit", option: "rabbit_userid", value: "guest" }
+    - { section: "oslo_messaging_rabbit", option: "rabbit_password", value: "{{ admin_password }}" }
+    - { section: "DEFAULT", option: "auth_strategy", value: "keystone" }
+    - { section: "keystone_authtoken", option: "auth_uri", value: "http://{{ mgmt_ip }}:5000/v2.0" }
+    - { section: "keystone_authtoken", option: "identity_uri", value: "http://{{ mgmt_ip }}:35357" }
+    - { section: "keystone_authtoken", option: "admin_tenant_name", value: "service" }
+    - { section: "keystone_authtoken", option: "admin_user", value: "ceilometer" }
+    - { section: "keystone_authtoken", option: "admin_password", value: "{{ admin_password }}" }
+    - { section: "service_credentials", option: "os_auth_url", value: "http://{{ mgmt_ip }}:5000/v2.0" }
+    - { section: "service_credentials", option: "os_username", value: "ceilometer" }
+    - { section: "service_credentials", option: "os_tenant_name", value: "service" }
+    - { section: "service_credentials", option: "os_password", value: "{{ admin_password }}" }
+    - { section: "service_credentials", option: "os_endpoint_type", value: "internalURL" }
+    - { section: "publisher", option: "telemetry_secret", value: "{{ ceilometer_secret }}" }
+
+- name: enable ceilometer services
+  service: name={{ item }} enabled=yes state=restarted
+  with_items:
+    - openstack-ceilometer-api
+    - openstack-ceilometer-notification
+    - openstack-ceilometer-central
+    - openstack-ceilometer-collector
+    - openstack-ceilometer-alarm-evaluator
+    - openstack-ceilometer-alarm-notifier
+
+# enable image events, so that we see something in ceilometer
+- name: setup the glance config file
+  ini_file: dest=/etc/glance/glance-api.conf 
+            section={{ item.section }} option={{ item.option }} value={{ item.value }}
+  with_items:
+    - { section: "DEFAULT", option: "notification_driver", value: "messagingv2" }
+    - { section: "DEFAULT", option: "rpc_backend", value: "rabbit" }
+    - { section: "DEFAULT", option: "rabbit_host", value: "{{ mgmt_ip }}" }
+    - { section: "DEFAULT", option: "rabbit_userid", value: "guest" }
+    - { section: "DEFAULT", option: "rabbit_password", value: "{{ admin_password }}" }
+
+- name: setup the glance registry config file
+  ini_file: dest=/etc/glance/glance-registry.conf
+            section={{ item.section }} option={{ item.option }} value={{ item.value }}
+  with_items:
+    - { section: "DEFAULT", option: "notification_driver", value: "messagingv2" }
+    - { section: "DEFAULT", option: "rpc_backend", value: "rabbit" }
+    - { section: "DEFAULT", option: "rabbit_host", value: "{{ mgmt_ip }}" }
+    - { section: "DEFAULT", option: "rabbit_userid", value: "guest" }
+    - { section: "DEFAULT", option: "rabbit_password", value: "{{ admin_password }}" }
+    
+- name: restart glance services
+  service: name={{ item }} state=restarted
+  with_items:
+    - openstack-glance-api
+    - openstack-glance-registry
+

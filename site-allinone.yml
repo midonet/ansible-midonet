@@ -1,3 +1,20 @@
+#
+# Midonet Ansible Quickstart
+# Copyright (C) 2015  Midokura SARL
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 ---
 # This playbook deploys the whole application stack in this site.
 
@@ -9,37 +26,31 @@
 - name: Create instance
   hosts: localhost
   connection: local
-  vars:
-    allinone: True
   vars_files:
   - vars/{{ deploy }}.yml
   - vars/defaults.yml
   - "{{ os_settings | default('vars/os_settings.yml') }}"
   tasks:
   - include: tasks/create-single-instance.yml
-  tags: c
+  tags: tag
 
 - hosts: allinone:!localhost
   vars_files:
   - vars/{{ deploy }}.yml
   - vars/defaults.yml
   - "{{ os_settings | default('vars/os_settings.yml') }}"
-  become: True
+  become: yes
   roles:
   - role: common
-    tags: c
   - midorepo
-  - role: zookeeper
-    tags: c
+  - zookeeper
   - cassandra
   - role: mysql
   - rabbitmq
   - keystone
-  - role: glance
-    tags: c
+  - glance
   - neutron-server
-  - role: neutron-dhcp-agent
-    when: midonet_metadata is defined and (midonet_metadata|bool == False)
+  - neutron-dhcp-agent
   - nova-conductor
   - nova-consoleauth
   - nova-api
@@ -59,11 +70,17 @@
   - role: controller_post
     controller_host: "{{deployment_name}}-allinone"
     public_ip: "{{ hostvars[controller_host]['ansible_ssh_host'] }}"
-    tags: c
+    tags: tag
   - role: compute_post
     controller_host: "{{deployment_name}}-allinone"
     midonet_api_hostname: "{{ hostvars[controller_host]['ansible_' + mgmt_iface + '']['ipv4']['address'] }}"
     keystone_hostname: "{{ hostvars[controller_host]['ansible_' + mgmt_iface + '']['ipv4']['address'] }}"
-    tags: c
-  - role: fake_uplink
-    tags: c
+    tags: tag
+  - role: midonet-manager
+    controller_host: "{{ deployment_name }}-allinone"
+    login_hostname: "{{ hostvars[controller_host]['ansible_ssh_host'] }}"
+    midonet_api_hostname: "{{ hostvars[controller_host]['ansible_ssh_host'] }}"
+    when: midonet_version | version_compare('2014.0', '<')
+    tags: manager
+    tags: tag
+  - fake_uplink

@@ -167,7 +167,7 @@ echo "Host: ${HOST_ID}"
 TZ_NAME='DEFAULT'
 TZ_ID=$(midonet-cli -e list tunnel-zone name $TZ_NAME | awk '{ print $2 }')
 if [[ -z "$TZ_ID" ]]; then
-    TZ_ID=$(midonet-cli -e create tunnel-zone name default_tz type gre)
+    TZ_ID=$(midonet-cli -e create tunnel-zone name $TZ_NAME type gre)
 fi
 echo "Tunnel Zone: ${TZ_ID}"
 
@@ -180,16 +180,20 @@ if [[ -z "$TZ_MEMBER" ]]; then
 fi
 echo "Tunnel Zone Member: ${TZ_MEMBER}"
 
-# Check if we need to bind - we assume that if 'veth1' is bound, then it must
-# exist, and so does veth0
-BINDING=$(midonet-cli -e host $HOST_ID list binding interface veth1)
-if [[ -z "$BINDING" ]]; then
-
+set +e
+ip link list dev veth0
+if [ $? != 0 ]; then
     # Create the veth interfaces
     sudo ip link add type veth
     sudo ip link set dev veth0 up
     sudo ip link set dev veth1 up
+fi
+set -e
 
+# Check if we need to bind - we assume that if 'veth1' is bound, then it must
+# exist, and so does veth0
+BINDING=$(midonet-cli -e host $HOST_ID list binding interface veth1)
+if [[ -z "$BINDING" ]]; then
     PORT_ID=$(midonet-cli -e bridge $NETWORK_ID add port)
     echo "Port: ${PORT_ID}"
 

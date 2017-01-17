@@ -1,0 +1,17 @@
+zookeeper.zookeeper_hosts="{{ zk_hosts }}"
+zookeeper.use_new_stack=true
+#cassandra.servers="{{ cs_hosts }}"
+cassandra.servers=""
+cassandra.replication_factor={{ replication_factor }}
+cassandra.cluster=midonet
+agent.midolman.bgp_keepalive=1s
+agent.midolman.bgp_holdtime=3s
+agent.midolman.bgp_connect_retry=1s
+agent.midolman.lock_memory=false
+agent.loggers.root=DEBUG
+agent.haproxy_health_monitor.namespace_cleanup=true
+agent.haproxy_health_monitor.health_monitor_enable=true
+agent.haproxy_health_monitor.haproxy_file_loc=/etc/midolman/l4lb/
+agent.openstack.metadata.nova_metadata_url = "http://{{ mgmt_ip }}:8775"
+agent.openstack.metadata.enabled = true
+agent.openstack.metadata.shared_secret = {{ metadata_secret }}

@@ -1,3 +1,20 @@
+#
+# Midonet Ansible Quickstart
+# Copyright (C) 2015  Midokura SARL
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 ---
 
 - include: facts.yml
@@ -8,7 +25,7 @@
 - name: Create keysotnerc for demo
   template: src=keystonerc_demo.j2 dest=/root/keystonerc_demo
 
-- name: Did we already downloaded CirrOS image?
+- name: Did we already download CirrOS image?
   stat: path=/tmp/cirros.img
   register: cirros
 
@@ -43,10 +60,11 @@
     ram: 64
     vcpus: 1
     disk: 0
+    is_public: 'yes'
 
 - name: Upgrade iproute
   yum: name=iproute state=latest
-  when: ansible_distribution == 'CentOS' and ansible_distribution_version.split(".")[0] == '6'
+  when: ansible_distribution == 'CentOS' and ansible_distribution_major_version == '6'
 
 - name: Update public endpoints
   script: update-endpoints.py --username {{ mysql_admin_username }} --endpoint-type public \
@@ -54,16 +72,20 @@
   when: hostvars.localhost.floating_ip_allinone is defined or hostvars.localhost.floating_ip_controller is defined
 
 - name: Install neutron plugin
-  apt: name=python-networking-midonet update_cache=yes state=present
-  when:
-    - ansible_os_family == 'Debian'
-    - openstack_version != 'kilo'
+  apt: name=python-neutron-plugin-midonet update_cache=yes state=present
+  when: ansible_os_family == 'Debian' and openstack_version != 'liberty' and (plugin_version is not defined or plugin_version == "default")
 
 - name: Install neutron plugin
-  apt: name=python-neutron-plugin-midonet update_cache=yes state=present
-  when:
-    - ansible_os_family == 'Debian'
-    - openstack_version == 'kilo'
+  apt: name=python-networking-midonet update_cache=yes state=present
+  when: ansible_os_family == 'Debian' and openstack_version == 'liberty' and (plugin_version is not defined or plugin_version == "default")
+
+- name: Install neutron plugin
+  apt: name=python-neutron-plugin-midonet={{plugin_version}} update_cache=yes state=present
+  when: ansible_os_family == 'Debian' and openstack_version != 'liberty' and (plugin_version is defined and plugin_version != "default")
+
+- name: Install neutron plugin
+  apt: name=python-networking-midonet={{plugin_version}} update_cache=yes state=present
+  when: ansible_os_family == 'Debian' and openstack_version == 'liberty' and (plugin_version is defined and plugin_version != "default")
 
 - name: Install mysql connector
   apt: name=python-mysql.connector state=present
@@ -76,20 +98,32 @@
     - openstack-neutron-midonet
     - openstack-neutron-lbaas
     - mysql-connector-python
-  when:
-    - ansible_os_family == 'RedHat'
-    - openstack_version == 'kilo'
+  when: ansible_os_family == 'RedHat' and openstack_version != 'liberty' and (plugin_version is not defined or plugin_version == "default")
+
+- name: Install neutron plugin
+  yum: name={{ item }} state=present
+  with_items:
+    - python-neutron-plugin-midonet-{{plugin_version}}
+    - openstack-neutron-midonet
+    - openstack-neutron-lbaas
+    - mysql-connector-python
+  when: ansible_os_family == 'RedHat' and openstack_version != 'liberty' and (plugin_version is defined and plugin_version != "default")
 
 - name: Install neutron plugin
   yum: name={{ item }} state=present
   with_items:
     - python-networking-midonet
-    - openstack-neutron-midonet
     - openstack-neutron-lbaas
     - mysql-connector-python
-  when:
-    - ansible_os_family == 'RedHat'
-    - openstack_version != 'kilo'
+  when: ansible_os_family == 'RedHat' and openstack_version == 'liberty' and (plugin_version is not defined or plugin_version == "default")
+
+- name: Install neutron plugin
+  yum: name={{ item }} state=present
+  with_items:
+    - python-networking-midonet-{{plugin_version}}
+    - openstack-neutron-lbaas
+    - mysql-connector-python
+  when: ansible_os_family == 'RedHat' and openstack_version == 'liberty' and (plugin_version is defined and plugin_version != "default")
 
 - name: Create midonet plugin directory
   file: dest=/etc/neutron/plugins/midonet/ recurse=yes state=directory
@@ -102,27 +136,13 @@
 
 - name: Link midonet plugin
   file: src=/etc/neutron/plugins/midonet/midonet_plugin.ini dest=/etc/neutron/plugin.ini state=link
-  when: enable_ml2_plugin != 'true'
-
-- name: Link ML2 Midonet plugin
-  file: src=/etc/neutron/plugins/ml2/ml2_conf.ini dest=/etc/neutron/plugin.ini state=link
-  when: enable_ml2_plugin == 'true'
 
 - name: Update neutron config
   ini_file: dest=/etc/neutron/neutron.conf section=DEFAULT option={{ item.option }} value={{ item.value }}
   with_items:
     - { option: 'core_plugin', value: "{{ midonet_plugin }}" }
-    - { option: 'service_plugins', value: "{{ service_plugin }}" }
+    - { option: 'service_plugins', value: 'midonet.neutron.services.l3.l3_midonet.MidonetL3ServicePlugin,midonet.neutron.services.firewall.plugin.MidonetFirewallPlugin,lbaas' }
     - { option: 'router_scheduler_driver', value: null}
-  notify:
-    - Restart neutron server
-
-- name: Update neutron config for ML2
-  ini_file: dest=/etc/neutron/neutron.conf section=DEFAULT option={{ item.option }} value={{ item.value }}
-  with_items:
-    - { option: 'core_plugin', value: "{{ midonet_ml2_plugin }}" }
-    - { option: 'service_plugins', value: "{{ service_plugin }}" }
-  when: enable_ml2_plugin
   notify:
     - Restart neutron server
 
@@ -133,59 +153,16 @@
   notify:
     - Restart neutron server
 
-- name: Update ml2 config for ML2
-  ini_file: dest=/etc/neutron/plugins/ml2/ml2_conf.ini section=ml2 option={{ item.option }} value={{ item.value }}
-  with_items:
-    - { option: 'tenant_network_types', value: "midonet" }
-    - { option: 'extension_drivers', value: "port_security" }
-    - { option: 'type_drivers', value: "midonet,uplink" }
-    - { option: 'mechanism_drivers', value: 'midonet' }
-  when: enable_ml2_plugin
-  notify:
-    - Restart neutron server
-
-- name: Update ml2 config for ML2
-  ini_file: dest=/etc/neutron/plugins/ml2/ml2_conf.ini section=MIDONET option={{ item.option }} value={{ item.value }}
-  with_items:
-    - { option: 'client', value: "midonet.neutron.client.api.MidonetApiClient" }
-    - { option: 'project_id', value: "admin" }
-    - { option: 'password', value: "{{ admin_pass }}" }
-    - { option: 'username', value: "admin" }
-    - { option: 'midonet_uri', value: "http://{{ mgmt_ip }}:8181/midonet-api" }
-  when: enable_ml2_plugin
-  notify:
-    - Restart neutron server
-
 - name: Upgrade neutron db with midonet tables
   shell: neutron-db-manage --subproject networking-midonet upgrade head
-  when: openstack_version != 'kilo'
-  become: True
+  when: openstack_version == 'liberty'
+  become: yes
   become_user: "neutron"
-
-
-- name: Upgrade neutron db with midonet tables
-  shell: midonet-db-manage upgrade head
-  when: openstack_version == 'kilo'
 
 - name: Allow Neutron to select the correct plugin
   template: src=neutron-server.j2 dest=/etc/default/neutron-server
   notify:
     - Restart neutron server
-
-- name: Configure metadata agent
-  ini_file: dest=/etc/neutron/metadata_agent.ini section=DEFAULT option={{ item.option }} value={{ item.value }}
-  with_items:
-    - { option: 'auth_url', value: "http://{{ mgmt_ip }}:5000/v2.0" }
-    - { option: 'auth_region', value: 'regionOne' }
-    - { option: 'admin_tenant_name', value: 'service' }
-    - { option: 'admin_user', value: 'neutron' }
-    - { option: 'admin_password', value: "{{ admin_pass }}" }
-    - { option: 'nova_metadata_ip', value: "{{ mgmt_ip }}" }
-    - { option: 'metadata_proxy_shared_secret', value: "{{ metadata_secret }}" }
-  notify:
-    - Restart metadata agent
-  when: midonet_metadata is defined and  (midonet_metadata|bool == False)
-
 
 - name: Update nova config
   ini_file: dest=/etc/nova/nova.conf section=DEFAULT option={{ item.option }} value={{ item.value }} backup=yes
@@ -239,34 +216,26 @@
   notify:
     - Restart nova services
 
-- name: Configure DHCP (default section)
-  ini_file: dest=/etc/neutron/dhcp_agent.ini section=DEFAULT option={{ item.option }} value={{ item.value }}
-  with_items:
-    - { option: 'interface_driver', value: 'neutron.agent.linux.interface.MidonetInterfaceDriver' }
-    - { option: 'dhcp_driver', value: 'midonet.neutron.agent.midonet_driver.DhcpNoOpDriver' }
-    - { option: 'enable_isolated_metadata', value: 'True'}
-  notify:
-    - Restart dhcp agent
-    - Restart neutron server
-  when: midonet_metadata is defined and (midonet_metadata|bool == False)
+#- name: Point horizon to root path
+#  lineinfile: >
+#    dest=/etc/apache2/conf-available/openstack-dashboard.conf
+#    regexp='.*WSGIScriptAlias'
+#    line="WSGIScriptAlias / /usr/share/openstack-dashboard/openstack_dashboard/wsgi/django.wsgi"
+#    backup=yes
+#  notify:
+#    - Restart apache2
 
-- name: Configure DHCP (midonet section)
-  ini_file: dest=/etc/neutron/dhcp_agent.ini section=MIDONET option={{ item.option }} value={{ item.value }}
+- name: Disable dhcp agent and metadata agent
+  service: name={{ item }} state=stopped enabled=no
+  ignore_errors: yes
   with_items:
-    - { option: 'midonet_uri', value: "http://{{ mgmt_ip }}:8181/midonet-api" }
-    - { option: 'username', value: 'admin' }
-    - { option: 'password', value: "{{ admin_pass }}" }
-    - { option: 'project_id', value: 'admin' }
-    - { option: 'auth_url', value: "http://{{ keystone_hostname }}:{{ keystone_port }}/v2.0" }
-  notify:
-    - Restart dhcp agent
-    - Restart neutron server
-  when: midonet_metadata is defined and (midonet_metadata|bool == False)
+    - neutron-dhcp-agent
+    - neutron-metadata-agent
 
 - meta: flush_handlers
 
 - name: Wait neutron
-  wait_for: host=127.0.0.1 port=9696
+  wait_for: host=127.0.0.1 port=9696 timeout=30
 
 - name: Create public network
   neutron_network: name=public state=present router_external=yes shared=true  admin_state_up=true
@@ -283,10 +252,11 @@
 - name: Create public subnet
   neutron_subnet: name=public_subnet state=present cidr=200.200.{{ subnet_prefix.stdout }}.0/24 network_name=public
                   login_username=admin login_password={{ admin_pass }} login_tenant_name=admin tenant_name=admin
+                  gateway_ip=200.200.{{ subnet_prefix.stdout }}.1
   when: hostvars.localhost.floating_ip_controller is defined
 
 - name: Create public subnet
-  neutron_subnet: name=public_subnet state=present cidr=200.200.200.0/24 network_name=public
+  neutron_subnet: name=public_subnet state=present cidr=200.200.200.0/24 network_name=public gateway_ip=200.200.200.1
                   login_username=admin login_password={{ admin_pass }} login_tenant_name=admin tenant_name=admin
   when: hostvars.localhost.floating_ip_controller is not defined
 
@@ -296,6 +266,7 @@
 - name: Create deployment information (multinode)
   template: src=deployment_multinode.hosts.j2 dest=/root/deployment.hosts
   when: hostvars.localhost.floating_ip_controller is defined
+
 
 - name: Set loglevel to debug in nova.conf (if loglevel==debug)
   ini_file:
