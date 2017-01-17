@@ -97,7 +97,7 @@
     - Restart nova compute
 
 - name: Update nova-compute DEFAULT config
-  ini_file: dest=/etc/nova/nova-compute.conf section=DEFAULT option={{ item.option }} value={{ item.value }} backup=yes
+  ini_file: dest=/etc/nova/nova-compute.conf create=yes section=DEFAULT option={{ item.option }} value={{ item.value }} backup=yes
   with_items:
     - { option: 'compute_driver', value: 'libvirt.LibvirtDriver' }
     - { option: 'vncserver_listen', value: '{{ vncserver_listen }}' }

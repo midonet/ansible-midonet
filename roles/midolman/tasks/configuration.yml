@@ -32,7 +32,7 @@
   delay: 10
 
 - name: Create midonetrc
-  ini_file: dest=~/.midonetrc section=cli option={{ item.option }} value={{ item.value }}
+  ini_file: dest=~/.midonetrc section=cli option={{ item.option }} value={{ item.value }} create=yes
   with_items:
     - { option: 'api_url', value: "http://{{ midonet_api_hostname }}:8181/midonet-api" }
     - { option: 'username', value: 'admin' }
