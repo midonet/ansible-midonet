@@ -19,7 +19,7 @@
   lineinfile: dest={{ dashboard_settings }}
               regexp=^SECRET_KEY
               line="SECRET_KEY = '{{ admin_password }}'"
-  when: ansible_os_family == 'RedHat' and ansible_distribution_major_version == '6'
+  when: ansible_os_family == 'RedHat' and ansible_distribution_version.split(".")[0] == '6'
   notify:
     - Restart apache2
 

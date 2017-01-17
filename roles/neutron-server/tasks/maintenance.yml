@@ -4,17 +4,9 @@
   file: path=/var/lib/neutron/neutron.sqlite state=absent
   when: ansible_os_family == 'Debian'
 
-- name: Upgrade database to juno
-  shell: /bin/sh -c "neutron-db-manage --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade juno" neutron
-  when: openstack_version == 'juno'
-  become: yes
-  notify:
-    - Restart neutron server
-
-- name: Upgrade database to kilo or liberty
-  shell: /bin/sh -c "neutron-db-manage --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade head" neutron
-  when: openstack_version == 'kilo' or openstack_version == 'liberty'
-  become: yes
-  become_method: su
+- name: Upgrade neutron database
+  command: neutron-db-manage --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade head
+  become: True
+  become_user: "neutron"
   notify:
     - Restart neutron server

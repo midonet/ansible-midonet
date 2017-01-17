@@ -21,4 +21,4 @@
   apt: name="{{ item }}" state=present
   with_items:
     - keystone
-    - python-openstackclient
+    - python-keystoneclient

@@ -1,20 +1,3 @@
-#
-# Midonet Ansible Quickstart
-# Copyright (C) 2015  Midokura SARL
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 ---
 # This playbook deploys the whole application stack in this site.
 
@@ -46,7 +29,7 @@
   - "{{ os_settings | default('vars/os_settings.yml') }}"
   roles:
   - common
-  become: yes
+  become: True
   tags:
     - zk
     - midolman
@@ -57,7 +40,7 @@
 
 # Zookeeper nodes
 - hosts: nsdb
-  become: yes
+  become: True
   vars_files:
   - vars/{{ deploy }}.yml
   - vars/defaults.yml
@@ -72,14 +55,15 @@
   - vars/{{ deploy }}.yml
   - vars/defaults.yml
   - "{{ os_settings | default('vars/os_settings.yml') }}"
-  become: yes
+  become: True
   roles:
   - mysql
   - rabbitmq
   - keystone
   - glance
   - neutron-server
-  - neutron-dhcp-agent
+  - role: neutron-dhcp-agent
+    when: midonet_metadata is defined and (midonet_metadata|bool == False)
   - nova-conductor
   - nova-consoleauth
   - nova-api
@@ -103,6 +87,7 @@
 
 # Midolman hosts (compute and edge)
 - hosts: compute
+  become: True
   roles:
   - role: nova-compute
     controller_host: "{{deployment_name}}-controller"
@@ -125,10 +110,11 @@
   - "{{ os_settings | default('vars/os_settings.yml') }}"
   tags: cp
 
-  become: yes
+
 
 # Edge nodes
 - hosts: edge
+  become: True
   roles:
   - midorepo
   - role: midolman
@@ -137,4 +123,3 @@
   - vars/{{ deploy }}.yml
   - vars/defaults.yml
   - "{{ os_settings | default('vars/os_settings.yml') }}"
-  become: yes
