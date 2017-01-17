@@ -20,6 +20,8 @@
   shell: "midonet-cli -e tunnel-zone list | grep {{ tzone_type }}"
   register: midonet_tzone_exists
   failed_when: midonet_tzone_exists.rc >= 2
+  retries: 5
+  delay: 10
 
 - name: Create tunnel zone
   shell: "midonet-cli -e tunnel-zone create name {{ tzone_type }} type {{ tzone_type }} "
