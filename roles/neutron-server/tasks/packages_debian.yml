@@ -17,12 +17,10 @@
 # limitations under the License.
 #
 
-- name: Remove neutron server and client first
+- name: Clean neutron server first
   apt: name="{{ item }}" state=absent
   with_items:
     - neutron-server
-    - python-neutronclient
-
 
 - name: Install neutron server and client
   apt: name="{{ item }}" state=present

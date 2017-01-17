@@ -19,7 +19,7 @@
 
 - name: Sync nova db
   shell: nova-manage db sync
-  become: yes
+  become: True
   become_user: nova
   notify:
     - Restart nova conductor

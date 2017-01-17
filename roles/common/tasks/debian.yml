@@ -1,65 +1,24 @@
-#
-# Copyright 2015 Midokura SARL
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
 ---
 
+- name: Add apt proxy
+  template: src=02proxy.j2 dest=/etc/apt/apt.conf.d/02proxy
+  when:
+  - http_proxy is defined and http_proxy != ""
+
+- name: No apt proxy
+  file: path=/etc/apt/apt.conf.d/02proxy state=absent
+  when:
+  - http_proxy is not defined
+
+- name: Add ppa for openjdk 8
+  shell: apt-add-repository -y ppa:openjdk-r/ppa
+
 - name: Add openstack APT repo
-  shell: "add-apt-repository -y cloud-archive:{{openstack_version}}"
-  when: openstack_version != 'kilo'
-
-- name: Update APT cache
-  apt: update_cache=yes
-
-- name: Add local hostname
-  command: sed -i '/127.0.0.1 localhost$/ s/$/ '{{ ansible_hostname }}'/' /etc/hosts
-
-- name: Import Azul's public key
-  command: apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 0x219BD9C9
-
-- name: Add the Azul package to the APT repository
-  shell: "apt-add-repository 'deb http://repos.azulsystems.com/ubuntu stable main'"
-
-- name: Add openstack kilo APT repo
-  shell: "echo 'deb http://ubuntu-cloud.archive.canonical.com/ubuntu trusty-updates/kilo main' >> /etc/apt/sources.list.d/ubuntu-cloud-archive-kilo-trusty.list"
-  when: openstack_version == 'kilo'
+  shell: "echo 'deb http://ubuntu-cloud.archive.canonical.com/ubuntu trusty-updates/{{openstack_version}} main' > /etc/apt/sources.list.d/ubuntu-cloud-archive-{{openstack_version}}-trusty.list"
 
 - name: Add openstack cloud ring
   apt: name=ubuntu-cloud-keyring state=present
 
 - name: Update APT cache
   apt: update_cache=yes
-
-- name: Tear down apparmor profiles
-  shell: "/etc/init.d/apparmor teardown"
-  ignore_errors: true
-
-- name: Remove apparmor
-  apt: name=apparmor state=absent
-
-- name: Set MTU to 1500
-  shell: ip link set dev {{ item }} mtu 1500
-  with_items: '{{ ansible_interfaces }}'
-  when: item | match('eth*')
-
-- name: Add interface config
-  template: src=interface.j2 dest=/etc/network/interfaces.d/{{ item }}.cfg
-  with_items: '{{ ansible_interfaces }}'
-  when: item | match('eth*')
-
-- name: Add apt proxy
-  template: src=02proxy.j2 dest=/etc/apt/apt.conf.d/02proxy
-  when:
-  - http_proxy is defined
-  - http_proxy != ""
+  retries: 2

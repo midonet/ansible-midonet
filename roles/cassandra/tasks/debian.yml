@@ -1,26 +1,11 @@
-#
-# Copyright 2015 Midokura SARL
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
 ---
 
 - name: Install curl
   apt: name=curl state=present
 
 - name: Get datastax repo_key
-  shell: curl -L http://debian.datastax.com/debian/repo_key | sudo apt-key add -
-  register: apt_key_out
+  apt_key: url=http://debian.datastax.com/debian/repo_key state=present
+  retries: 3
 
 - name: Add datastax repo
   shell: apt-add-repository 'deb http://debian.datastax.com/community stable main'
@@ -31,20 +16,19 @@
 - name: Remove openjdk 6
   apt: name=openjdk-6-jre-headless state=absent
 
+# Supported Cassandra 2.0.10 only
 - name: Install cassandra
-  apt: name=cassandra=2.2.7 state=present update_cache=yes
+  apt: name=cassandra=2.0.10 state=present update_cache=yes
 
 - name: Force stop cassandra
   service: name=cassandra state=stopped
 
+- name: List cassandra data
+  shell: ls -1 /var/lib/cassandra/
+  register: cassandra_files
+
 - name: Clear cassandra data
-  shell: sudo rm -rf /var/lib/cassandra/*
+  file: path=/var/lib/cassandra/{{ item }} state=absent
+  with_items: cassandra_files.stdout_lines
   notify:
     - Restart cassandra
-
-- name: Configure cassandra
-  template: src=cassandra.yaml dest=/etc/cassandra/cassandra.yaml
-  notify:
-    - Restart cassandra
-
-- meta: flush_handlers

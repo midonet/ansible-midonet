@@ -398,7 +398,11 @@ api_v3_extensions = all
 api_extensions = all
 block_migration_for_live_migration = False
 change_password = False
+{% if ansible_os_family == 'Debian' %}
+live_migration = True
+{% else %}
 live_migration = False
+{% endif %}
 resize = True
 api_v3 = False
 

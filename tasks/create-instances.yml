@@ -1,21 +1,3 @@
-#
-# Midonet Ansible Quickstart
-# Copyright (C) 2015  Midokura SARL
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-
 # tasks/create-instances.yml
 # Creates a new VM and attaches to a network and passes metadata to the instance
 ---
@@ -76,7 +58,7 @@
      image_id: "{{ os_image_id }}"
      key_name: "{{ os_key_name }}"
      wait_for: 500
-     flavor_id: 7 # TODO: get proper flavor
+     flavor_id: 7
      nics:
        - net-id: "{{ os_net_id }}"
   register: nsdb
@@ -124,7 +106,7 @@
      image_id: "{{ os_image_id }}"
      key_name: "{{ os_key_name }}"
      wait_for: 500
-     flavor_id: 7 # TODO: get proper flavor
+     flavor_id: 7
      nics:
        - net-id: "{{ os_net_id }}"
   register: compute
@@ -208,6 +190,6 @@
 
 
 - name: Wait until all goes up
-  wait_for: host={{ hostvars[item]['ansible_ssh_host'] }} port=22 state=present
+  wait_for: host={{ hostvars[item]['ansible_ssh_host'] }} port=22 state=started timeout=600
   with_items: groups['all']
   when: item != "localhost"
